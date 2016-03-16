@@ -4,6 +4,10 @@ class Well:
         self.row = row
         self.col = col
         self.content = content
+        self.row_index_dict = dict(
+            [(row_str, row_ind)
+             for row_str, row_ind
+             in zip("ABCDEFGH", range(0, 7))])
 
     def get_key(self):
         return "{}:{}".format(self.row, self.col)
@@ -13,6 +17,10 @@ class Well:
 
     def __str__(self):
         return "{} => {}".format(self.get_key(), self.content)
+
+    def get_coordinates(self):
+        # Zero based
+        return self.row_index_dict[self.row], int(self.col) - 1
 
 
 class Plate:
