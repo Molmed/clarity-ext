@@ -6,6 +6,8 @@ class Extension(DriverFileExtension):
     """
     Creates an input file for the Fragment Analyzer.
     """
+    def newline(self):
+        return "\r\n"
 
     def filename(self):
         """Returns the name of the file to be uploaded"""

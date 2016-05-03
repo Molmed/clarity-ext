@@ -258,6 +258,9 @@ class GeneralExtension:
 class DriverFileExtension(GeneralExtension):
     __metaclass__ = ABCMeta
 
+    def newline(self):
+        return "\n"
+
     @abstractmethod
     def content(self):
         """Yields the output lines of the file"""

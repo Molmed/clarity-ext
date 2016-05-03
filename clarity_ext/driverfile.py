@@ -28,10 +28,12 @@ class DriverFileService:
             self.logger.debug("Creating directories {}".format(root))
             os.makedirs(root)
         full_path = os.path.join(root, self.extension.filename())
-        with open(full_path, 'w') as f:
+        # The file needs to be openeded in binary form to ensure that Windows line endings are used if specified
+        with open(full_path, 'wb') as f:
             self.logger.debug("Writing output to {}.".format(full_path))
+            newline = self.extension.newline()
             for line in self.extension.content():
-                f.write(line + "\n")
+                f.write(line + newline)
         return full_path
 
     def _upload(self, local_file, commit, artifacts_to_stdout):
@@ -41,7 +43,7 @@ class DriverFileService:
         self.logger.debug("Shared file from extension: {}".format(
             self.extension.shared_file()))
         artifacts = [shared_file for shared_file in self.extension.context.shared_files
-                    if shared_file.name == self.extension.shared_file()]
+                     if shared_file.name == self.extension.shared_file()]
         assert len(artifacts) == 1
         artifact = artifacts[0]
 
