@@ -158,7 +158,7 @@ class ExtensionService:
                             msg.append(diff)
                         raise ResultsDifferFromFrozenData("\n".join(msg))
                 else:
-                    print("No frozen data found")
+                    print("No frozen data found at {}".format(frozen_path))
 
         elif mode == self.RUN_MODE_FREEZE:
             frozen_root_path = config.get("frozen_root_path", ".")
