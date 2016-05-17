@@ -1,5 +1,4 @@
 from genologics.config import BASEURI, USERNAME, PASSWORD
-from genologics.lims import Lims
 from genologics.entities import *
 import requests
 import os
@@ -13,19 +12,16 @@ class ExtensionContext:
     """
     Defines context objects for extensions.
     """
-    def __init__(self, current_step, logger=None, cache=False):
+    def __init__(self, logger=None, cache=False, clarity_svc=None):
         """
         Initializes the context.
 
-        :param current_step: The step from which the extension is running
         :param logger: A logger instance
         :param cache: Set to True to use the cache folder (.cache) for downloaded files
+        :param clarity_svc: A LimsService object, encapsulates connections to the Clarity application server
         """
-        lims = Lims(BASEURI, USERNAME, PASSWORD)
-        lims.check_version()
 
-        self.advanced = Advanced(lims)
-        self.current_step = Process(lims, id=current_step)
+        self.advanced = Advanced(clarity_svc.api)
         self.logger = logger or logging.getLogger(__name__)
         self._local_shared_files = []
         self.cache = cache
@@ -211,4 +207,12 @@ class Advanced:
         """
         url = "{}/api/v2/{}".format(BASEURI, endpoint)
         return requests.get(url, auth=(USERNAME, PASSWORD))
+
+
+class ClarityService:
+    """A wrapper around connections to the lims. Provided for testability"""
+    def __init__(self, api, current_step):
+        self.api = api
+        api.check_version()
+        self.current_step = Process(self.api, id=current_step)
 

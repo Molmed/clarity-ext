@@ -10,6 +10,9 @@ import logging
 import difflib
 import re
 from clarity_ext.utils import lazyprop
+from genologics.config import BASEURI, USERNAME, PASSWORD
+from genologics.lims import Lims
+from clarity_ext.context import ClarityService
 
 
 # Defines all classes that are expected to be extended. These are
@@ -130,7 +133,8 @@ class ExtensionService:
 
                 self.logger.info("Executing at {}".format(path))
 
-                context = ExtensionContext(run_arguments["pid"], cache=cache_artifacts)
+                clarity_svc = ClarityService(Lims(BASEURI, USERNAME, PASSWORD), run_arguments["pid"])
+                context = ExtensionContext(cache=cache_artifacts, clarity_svc=clarity_svc)
 
                 if issubclass(extension, DriverFileExtension):
                     instance = extension(context)
