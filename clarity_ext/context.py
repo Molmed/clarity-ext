@@ -173,6 +173,27 @@ class ExtensionContext:
             tree = objectify.parse(fs)
             return tree.getroot()
 
+    def output_result_file_by_id(self, id):
+        """Returns the output result file by id"""
+        resource = [f for f in self.output_result_files if f.id == id][0]
+        return ResultFile(resource, self.units)
+
+    @property
+    def output_result_files(self):
+        for _, output in self.current_step.input_output_maps:
+            if output["output-type"] == "ResultFile":
+                yield output["uri"]
+
+    def update(self, obj):
+        """Add an object that has a commit method to the list of objects to update"""
+        self._update_queue.append(obj)
+
+    def commit(self):
+        """Commits all objects that have been added via the update method, using batch processing if possible"""
+        # TODO: Implement batch processing
+        for obj in self._update_queue:
+            obj.commit()
+
 
 class MatchedAnalytes:
     """ Provides a set of  matched input - output analytes for a process.
