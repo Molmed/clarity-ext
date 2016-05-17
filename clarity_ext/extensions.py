@@ -101,6 +101,9 @@ class ExtensionService:
                     module, self.RUN_MODE_FREEZE))
 
             for run_arguments in run_arguments_list:
+                step_prefix = "24-"
+                if not run_arguments["pid"].startswith(step_prefix):
+                    run_arguments["pid"] = "{}{}".format(step_prefix, run_arguments["pid"])
                 path = self._run_path(run_arguments, module, mode, config)
                 frozen_path = self._run_path(run_arguments, module, self.RUN_MODE_FREEZE, config)
 
