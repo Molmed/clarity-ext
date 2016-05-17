@@ -6,6 +6,9 @@ from clarity_ext.dilution import *
 import re
 import shutil
 import clarity_ext.utils as utils
+from lxml import objectify
+from clarity_ext.units import Units
+from clarity_ext.result_file import ResultFile
 
 
 class ExtensionContext:
@@ -26,9 +29,14 @@ class ExtensionContext:
         self._local_shared_files = []
         self.cache = cache
 
-    def local_shared_file(self, file_name):
+        self.units = Units(self.logger)
+        self._update_queue = []
+        self.current_step = clarity_svc.current_step
+
+    def local_shared_file(self, file_name, mode='r'):
         """
-        Downloads the local shared file and returns the path to it on the file system.
+        Downloads the local shared file and returns an open file-like object.
+
         If the file already exists, it will not be downloaded again.
 
         Details:
@@ -81,7 +89,7 @@ class ExtensionContext:
         if local_path not in self._local_shared_files:
             self._local_shared_files.append(local_path)
 
-        return local_path
+        return open(local_path, mode)
 
     def _get_input_analytes(self, plate):
         # Get an unique set of input analytes
@@ -156,6 +164,14 @@ class ExtensionContext:
                                  "that it won't be uploaded again".format(path))
                 # TODO: Handle exception
                 os.remove(path)
+
+    def local_shared_xml(self, name):
+        """
+        Returns a local copy of the xml file as a Python object
+        """
+        with self.local_shared_file(name, "r") as fs:
+            tree = objectify.parse(fs)
+            return tree.getroot()
 
 
 class MatchedAnalytes:
