@@ -7,7 +7,7 @@ import re
 import shutil
 import clarity_ext.utils as utils
 from lxml import objectify
-from clarity_ext.units import Units
+from clarity_ext import UnitConversion
 from clarity_ext.result_file import ResultFile
 
 
@@ -29,7 +29,7 @@ class ExtensionContext:
         self._local_shared_files = []
         self.cache = cache
 
-        self.units = Units(self.logger)
+        self.units = UnitConversion(self.logger)
         self._update_queue = []
         self.current_step = clarity_svc.current_step
 

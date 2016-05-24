@@ -2,7 +2,7 @@ import math
 import logging
 
 
-class Units:
+class UnitConversion:
     NANO = -9
     PICO = -12
 
