@@ -2,53 +2,6 @@ from collections import namedtuple
 from clarity_ext.utils import lazyprop
 
 
-class Analyte:
-    """
-    Describes an Analyte in the Clarity LIMS system, including custom UDFs.
-
-    Takes an analyte resource as input.
-    """
-
-    def __init__(self, resource, plate):
-        self.resource = resource
-        self.plate = plate
-
-    # Mapped properties from the underlying resource
-    @property
-    def name(self):
-        return self.resource.name
-
-    # Mapped UDFs
-    @property
-    def concentration(self):
-        return self.resource.udf["Concentration"]
-
-    @property
-    def target_concentration(self):
-        return float(self.resource.udf["Target Concentration"])
-
-    @property
-    def target_volume(self):
-        return self.resource.udf["Target Volume"]
-
-    # Other properties
-    @property
-    def well(self):
-        pos = PlatePosition.create(self.resource.location[1])
-        return Well(pos, self.plate)
-
-    @property
-    def container(self):
-        return self.resource.location[0]
-
-    @property
-    def sample(self):
-        return self.resource.samples[0]
-
-    def __repr__(self):
-        return "{} ({})".format(self.name, self.sample.id)
-
-
 class Well:
     """Encapsulates a well in a plate"""
     def __init__(self, position, plate, artifact_name=None, artifact_id=None):
@@ -272,22 +225,3 @@ class Plate:
         self.wells[well_id].artifact_name = artifact_name
         self.wells[well_id].artifact_id = artifact_id
 
-
-class ValidationType:
-    ERROR = 1
-    WARNING = 2
-
-
-class ValidationException:
-    def __init__(self, msg, validation_type=ValidationType.ERROR):
-        self.msg = msg
-        self.type = validation_type
-
-    def _repr_type(self):
-        if self.type == ValidationType.ERROR:
-            return "Error"
-        elif self.type == ValidationType.WARNING:
-            return "Warning"
-
-    def __repr__(self):
-        return "{}: {}".format(self._repr_type(), self.msg)

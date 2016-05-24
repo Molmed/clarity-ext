@@ -9,6 +9,7 @@ import clarity_ext.utils as utils
 from lxml import objectify
 from clarity_ext import UnitConversion
 from clarity_ext.result_file import ResultFile
+from clarity_ext.utils import lazyprop
 
 
 class ExtensionContext:
