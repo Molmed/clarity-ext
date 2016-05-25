@@ -69,6 +69,12 @@ class ExtensionService:
         :param artifacts_to_stdout: Set to true if all artifacts created should be echoed to stdout
         :return:
         """
+        if config is None:
+            config = {
+                "test_root_path": "./clarity_ext_scripts/int_tests",
+                "frozen_root_path": "../clarity-ext-frozen",
+                "exec_root_path": "."
+            }
         if mode == self.RUN_MODE_TEST:
             self.logger.info("Using cache {}".format(self.CACHE_NAME))
             utils.use_requests_cache(self.CACHE_NAME)
@@ -87,7 +93,7 @@ class ExtensionService:
             if len(run_arguments_list) == 0:
                 print("WARNING: No integration tests defined. Not able to test.")
                 return
-        elif type(run_arguments_list) is not list:
+        elif not isinstance(run_arguments_list, list):
             run_arguments_list = [run_arguments_list]
 
         if mode in [self.RUN_MODE_TEST, self.RUN_MODE_EXEC]:
