@@ -1,5 +1,6 @@
 from genologics.config import BASEURI, USERNAME, PASSWORD
 from genologics.entities import *
+from genologics.lims import Lims
 import requests
 import os
 from clarity_ext.dilution import *
@@ -209,7 +210,6 @@ class FakingEntityMonkey:
         self._overwrite_string_descriptor()
         self._overwrite_process()
         self._overwrite_lims()
-        self._overwrite_extension_context()
         self._overwrite_entity_list_descriptor()
 
     def reset(self):
@@ -220,8 +220,6 @@ class FakingEntityMonkey:
         Process.all_outputs = self.process_all_outputs
         Lims.check_version = self.lims_check_version
         Lims.get_batch = self.lims_get_batch
-        ExtensionContext._init_lims = self.extension_context_init_lims
-        ExtensionContext._init_current_step = self.extension_context_init_current_step
 
     def _overwrite_entity_list_descriptor(self):
         def __get__(self, instance, cls):
@@ -293,19 +291,6 @@ class FakingEntityMonkey:
         self.lims_get_batch = Lims.get_batch
         Lims.check_version = check_version
         Lims.get_batch = get_batch
-
-    # noinspection PyProtectedMember
-    def _overwrite_extension_context(self):
-        def _init_lims(self):
-            return Lims("xxx", "xxx", "xxx")
-
-        def _init_current_step(self, lims, id):
-            return None
-
-        self.extension_context_init_lims = ExtensionContext._init_lims
-        self.extension_context_init_current_step = ExtensionContext._init_current_step
-        ExtensionContext._init_lims = _init_lims
-        ExtensionContext._init_current_step = _init_current_step
 
 
 class MatchedAnalytes:
