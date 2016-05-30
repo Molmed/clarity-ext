@@ -7,10 +7,6 @@ class Dilute:
     def __init__(self, input_analyte, output_analyte):
         self.target_concentration = output_analyte.target_concentration
         self.target_volume = output_analyte.target_volume
-
-        # TODO: Ensure that the domain object sets these to None if not available
-        # TODO: Add the following condition to the validation stuff:
-        # if self.target_concentration is None or self.target_volume is None:
         self.source_well = input_analyte.well
         self.source_container = input_analyte.container
         self.target_well = output_analyte.well
@@ -90,9 +86,6 @@ class RobotDeckPositioner:
 
 PLATE_TYPE_96_WELL = 1
 
-PlateDimensions = {
-    PLATE_TYPE_96_WELL: {"rows": 12, "cols": 8}
-}
 
 class DilutionScheme:
     """Creates a dilution scheme, given input and output analytes."""

@@ -10,6 +10,9 @@ import logging
 import difflib
 import re
 from clarity_ext.utils import lazyprop
+from genologics.config import BASEURI, USERNAME, PASSWORD
+from genologics.lims import Lims
+from clarity_ext.context import ClarityService
 
 
 # Defines all classes that are expected to be extended. These are
@@ -24,8 +27,9 @@ class ExtensionService:
     RUN_MODE_FREEZE = "freeze"
     RUN_MODE_EXEC = "exec"
 
-    # TODO: It would be preferable to have all cached data in a subdirectory
-    CACHE_NAME = "http_cache"
+    # TODO: It would be preferable to have all cached data in a subdirectory, needs a patch in requests-cache
+    CACHE_NAME = ".http_cache"
+    CACHE_ARTIFACTS_DIR = ".cache"
 
     def __init__(self, logger=None):
         self.logger = logger or logging.getLogger(__name__)
@@ -51,7 +55,8 @@ class ExtensionService:
         else:
             return in_argument.__dict__
 
-    def execute(self, module, mode, run_arguments_list=None, config=None):
+    def execute(self, module, mode, run_arguments_list=None, config=None, artifacts_to_stdout=True,
+                print_help=True):
         """
         Given a module, finds the extension in it and runs all of its integration tests
         :param module:
@@ -60,8 +65,16 @@ class ExtensionService:
             extensions integration_tests will be used. A list of dicts can be provided for
             multiple runs.
             A string of key value pairs can also be sent.
+        :param config: A configuration directory with additional parameters, such as location of directories
+        :param artifacts_to_stdout: Set to true if all artifacts created should be echoed to stdout
         :return:
         """
+        if config is None:
+            config = {
+                "test_root_path": "./clarity_ext_scripts/int_tests",
+                "frozen_root_path": "../clarity-ext-frozen",
+                "exec_root_path": "."
+            }
         if mode == self.RUN_MODE_TEST:
             self.logger.info("Using cache {}".format(self.CACHE_NAME))
             utils.use_requests_cache(self.CACHE_NAME)
@@ -80,11 +93,11 @@ class ExtensionService:
             if len(run_arguments_list) == 0:
                 print("WARNING: No integration tests defined. Not able to test.")
                 return
-        elif type(run_arguments_list) is not list:
+        elif not isinstance(run_arguments_list, list):
             run_arguments_list = [run_arguments_list]
 
         if mode in [self.RUN_MODE_TEST, self.RUN_MODE_EXEC]:
-            if mode == self.RUN_MODE_TEST:
+            if mode == self.RUN_MODE_TEST and print_help:
                 print("To execute from Clarity:")
                 print("  clarity-ext extension --args '{}' {} {}".format(
                     "pid={processLuid}",
@@ -94,47 +107,57 @@ class ExtensionService:
                     module, self.RUN_MODE_FREEZE))
 
             for run_arguments in run_arguments_list:
+                step_prefix = "24-"
+                if not run_arguments["pid"].startswith(step_prefix):
+                    run_arguments["pid"] = "{}{}".format(step_prefix, run_arguments["pid"])
                 path = self._run_path(run_arguments, module, mode, config)
                 frozen_path = self._run_path(run_arguments, module, self.RUN_MODE_FREEZE, config)
 
                 if mode == self.RUN_MODE_TEST:
-                    cache_file = '{}.sqlite'.format(self.CACHE_NAME)
+                    http_cache_file = '{}.sqlite'.format(self.CACHE_NAME)
 
                     # Remove everything but the cache files
                     if os.path.exists(path):
-                        utils.clean_directory(path, [cache_file])
+                        utils.clean_directory(path, [http_cache_file, self.CACHE_ARTIFACTS_DIR])
                     else:
                         os.makedirs(path)
 
                     # Copy the cache file from the frozen path if available:
-                    frozen_cache = os.path.join(frozen_path, cache_file)
-                    print("Copy frozen path", frozen_cache)
-                    if os.path.exists(frozen_cache):
-                        print("Frozen cache file exists and will be used")
-                        shutil.copy(frozen_cache, path)
+                    frozen_http_cache_file = os.path.join(frozen_path, http_cache_file)
+                    frozen_cache_dir = os.path.join(frozen_path, self.CACHE_ARTIFACTS_DIR)
+                    if os.path.exists(frozen_http_cache_file):
+                        self.logger.info("Frozen http cache file exists and will be used")
+                        shutil.copy(frozen_http_cache_file, path)
 
-
+                    if os.path.exists(frozen_cache_dir):
+                        if os.path.exists(os.path.join(path, self.CACHE_ARTIFACTS_DIR)):
+                            shutil.rmtree(os.path.join(path, self.CACHE_ARTIFACTS_DIR))
+                        self.logger.info("Frozen cache directory exists and will be used")
+                        shutil.copytree(frozen_cache_dir, os.path.join(path, self.CACHE_ARTIFACTS_DIR))
 
                 old_dir = os.getcwd()
                 os.chdir(path)
 
-                print("Executing at {}".format(path))
+                cache_artifacts = mode == self.RUN_MODE_TEST
+
+                self.logger.info("Executing at {}".format(path))
+
+                clarity_svc = ClarityService(Lims(BASEURI, USERNAME, PASSWORD), run_arguments["pid"])
+                context = ExtensionContext(cache=cache_artifacts, clarity_svc=clarity_svc)
 
                 if issubclass(extension, DriverFileExtension):
-                    context = ExtensionContext(run_arguments["pid"])
                     instance = extension(context)
                     driver_file_svc = DriverFileService(instance, ".")
                     commit = mode == self.RUN_MODE_EXEC
-                    driver_file_svc.execute(commit=commit, artifacts_to_stdout=True)
-                    context.cleanup()
+                    driver_file_svc.execute(commit=commit, artifacts_to_stdout=artifacts_to_stdout)
                 elif issubclass(extension, GeneralExtension):
                     # TODO: Generating the instance twice (for metadata above)
-                    context = ExtensionContext(run_arguments["pid"])
                     instance = extension(context)
                     instance.execute()
-                    context.cleanup()
                 else:
                     raise NotImplementedError("Unknown extension")
+                context.cleanup()
+
                 os.chdir(old_dir)
 
                 if os.path.exists(frozen_path):
@@ -142,14 +165,13 @@ class ExtensionService:
                     frozen_info = RunDirectoryInfo(frozen_path)
                     diff_report = list(test_info.compare(frozen_info))
                     if len(diff_report) > 0:
-                        print("WARNING: Results differ from those already frozen. Re-freeze if this is valid.")
+                        msg = []
                         for type, key, diff in diff_report:
-                            print("{} ({})".format(key, type))
-                            print(diff)
-                    else:
-                        print("Validation against the frozen data succeeded")
+                            msg.append("{} ({})".format(key, type))
+                            msg.append(diff)
+                        raise ResultsDifferFromFrozenData("\n".join(msg))
                 else:
-                    print("No frozen data found")
+                    print("No frozen data found at {}".format(frozen_path))
 
         elif mode == self.RUN_MODE_FREEZE:
             frozen_root_path = config.get("frozen_root_path", ".")
@@ -165,7 +187,11 @@ class ExtensionService:
                     shutil.rmtree(frozen_path)
                 shutil.copytree(test_path, frozen_path)
         else:
-            raise NotImplementedError("coming soon")
+            raise NotImplementedError("Mode '{}' is not implemented".format(mode))
+
+
+class ResultsDifferFromFrozenData(Exception):
+    pass
 
 
 class RunDirectoryInfo:
@@ -244,6 +270,9 @@ class GeneralExtension:
 
 class DriverFileExtension(GeneralExtension):
     __metaclass__ = ABCMeta
+
+    def newline(self):
+        return "\n"
 
     @abstractmethod
     def content(self):

@@ -7,8 +7,8 @@ class WellTest(unittest.TestCase):
         plate = Plate(plate_type=Plate.PLATE_TYPE_96_WELLS)
 
         def assert_well(location, expected):
-            row, col = location.split(":")
-            well = Well(row, col, plate)
+            pos = PlatePosition.create(location)
+            well = Well(pos, plate)
             self.assertEqual(well.index_down_first, expected)
 
         assert_well("A:1", 1)
