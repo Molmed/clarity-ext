@@ -10,4 +10,4 @@ run-test/
 *.swp
 int_tests/
 .virtualenv
-
+*~
