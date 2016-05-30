@@ -1,32 +1,43 @@
 from genologics.config import BASEURI, USERNAME, PASSWORD
-from genologics.lims import Lims
 from genologics.entities import *
 import requests
 import os
-from clarity_ext.utils import lazyprop
 from clarity_ext.dilution import *
+import re
+import shutil
+import clarity_ext.utils as utils
+from lxml import objectify
+from clarity_ext import UnitConversion
+from clarity_ext.result_file import ResultFile
+from clarity_ext.utils import lazyprop
 
 
-# TODO: Use the same extension context for all extensions, throwing an exception if
-# a particular feature is not available
 class ExtensionContext:
     """
     Defines context objects for extensions.
     """
-    def __init__(self, current_step, logger=None):
-        # TODO: Add the lims property to "advanced" so that it won't be accessed accidentally?
-        # TODO: These don't need to be provided in most cases
-        lims = Lims(BASEURI, USERNAME, PASSWORD)
-        lims.check_version()
+    def __init__(self, logger=None, cache=False, clarity_svc=None):
+        """
+        Initializes the context.
 
-        self.advanced = Advanced(lims)
-        self.current_step = Process(lims, id=current_step)
+        :param logger: A logger instance
+        :param cache: Set to True to use the cache folder (.cache) for downloaded files
+        :param clarity_svc: A LimsService object, encapsulates connections to the Clarity application server
+        """
+
+        self.advanced = Advanced(clarity_svc.api)
         self.logger = logger or logging.getLogger(__name__)
         self._local_shared_files = []
+        self.cache = cache
 
-    def local_shared_file(self, file_name):
+        self.units = UnitConversion(self.logger)
+        self._update_queue = []
+        self.current_step = clarity_svc.current_step
+
+    def local_shared_file(self, file_name, mode='r'):
         """
-        Downloads the local shared file and returns the path to it on the file system.
+        Downloads the local shared file and returns an open file-like object.
+
         If the file already exists, it will not be downloaded again.
 
         Details:
@@ -36,49 +47,50 @@ class ExtensionContext:
 
         # Ensure that the user is only sending in a "name" (alphanumerical or spaces)
         # File paths are not allowed
-        import re
         if not re.match(r"[\w ]+", file_name):
             raise ValueError("File name can only contain alphanumeric characters, underscores and spaces")
-        local_path = os.path.abspath(file_name.replace(" ", "_"))
+        local_file_name = file_name.replace(" ", "_")
+        local_path = os.path.abspath(local_file_name)
         local_path = os.path.abspath(local_path)
+        cache_directory = os.path.abspath(".cache")
+        cache_path = os.path.join(cache_directory, local_file_name)
 
-        if not os.path.exists(local_path):
-            by_name = [shared_file for shared_file in self.shared_files
-                       if shared_file.name == file_name]
-            assert len(by_name) == 1
-            artifact = by_name[0]
-            assert len(artifact.files) == 1
-            file = artifact.files[0]
-            self.logger.info("Downloading file {} (artifact={} '{}')"
-                             .format(file.id, artifact.id, artifact.name))
+        if self.cache and os.path.exists(cache_path):
+            self.logger.info("Fetching cached artifact from '{}'".format(cache_path))
+            shutil.copy(cache_path, ".")
+        else:
+            if not os.path.exists(local_path):
+                by_name = [shared_file for shared_file in self.shared_files
+                           if shared_file.name == file_name]
+                if len(by_name) != 1:
+                    files = ", ".join(map(lambda x: x.name, self.shared_files))
+                    raise ValueError("Expected 1 shared file, got {}.\nFile: '{}'\nFiles: {}".format(
+                        len(by_name), file_name, files))
+                artifact = by_name[0]
+                assert len(artifact.files) == 1
+                file = artifact.files[0]
+                self.logger.info("Downloading file {} (artifact={} '{}')"
+                                 .format(file.id, artifact.id, artifact.name))
 
-            # TODO: implemented in the genologics package?
-            response = self.advanced.get("files/{}/download".format(file.id))
-            with open(local_path, 'wb') as fd:
-                for chunk in response.iter_content():
-                    fd.write(chunk)
+                # TODO: implemented in the genologics package?
+                response = self.advanced.get("files/{}/download".format(file.id))
+                with open(local_path, 'wb') as fd:
+                    for chunk in response.iter_content():
+                        fd.write(chunk)
 
-            self.logger.info("Download completed, path='{}'".format(local_path))
+                self.logger.info("Download completed, path='{}'".format(local_path))
+
+                if self.cache:
+                    if not os.path.exists(cache_directory):
+                        os.mkdir(cache_directory)
+                    self.logger.info("Copying artifact to cache directory, {}=>{}".format(local_path, cache_directory))
+                    shutil.copy(local_path, cache_directory)
 
         # Add to this list for cleanup:
         if local_path not in self._local_shared_files:
             self._local_shared_files.append(local_path)
 
-        return local_path
-
-    @lazyprop
-    def plate2(self):
-        self.logger.debug("Getting current plate (lazy property)")
-        # TODO: Assumes 96 well plate only
-        plate = Plate()
-        for input, output in self.current_step.input_output_maps:
-            if output['output-generation-type'] == "PerInput":
-                # Process
-                artifact = output['uri']
-                location = artifact.location
-                well = location[1]
-                plate.set_well(well, artifact.name)
-        return plate
+        return open(local_path, mode)
 
     def _get_input_analytes(self, plate):
         # Get an unique set of input analytes
@@ -94,7 +106,7 @@ class ExtensionContext:
         # TODO: Seems like overkill to have a type for matching analytes, why not a gen. function?
         matched_analytes = MatchedAnalytes(input_analytes,
                                            self.current_step, self.advanced, plate)
-        # TODO: The caller needs to provide these parameters,
+        # TODO: The caller needs to provide these arguments
         return DilutionScheme(matched_analytes, "Hamilton", plate)
 
     @lazyprop
@@ -113,25 +125,35 @@ class ExtensionContext:
         return artifacts
 
     @lazyprop
-    def plate(self):
-        self.logger.debug("Getting current plate (lazy property)")
-        # TODO: Assumes 96 well plate only
-        self.logger.debug("Fetching plate")
+    def _extended_input_artifacts(self):
         artifacts = []
-
-        # TODO: Should we use this or .all_outputs?
         for input, output in self.current_step.input_output_maps:
             if output['output-generation-type'] == "PerInput":
                 artifacts.append(output['uri'])
 
         # Batch fetch the details about these:
         artifacts_ex = self.advanced.lims.get_batch(artifacts)
-        plate = Plate()
-        for artifact in artifacts_ex:
-            well_id = artifact.location[1]
-            plate.set_well(well_id, artifact.name, artifact.id)
+        return artifacts_ex
 
-        return plate
+    @lazyprop
+    def _extended_input_containers(self):
+        """
+        Returns a list with all input containers, where each container has been extended with the attribute
+        `artifacts`, containing all artifacts in the container
+        """
+        containers = {artifact.container.id: artifact.container
+                      for artifact in self._extended_input_artifacts}
+        ret = []
+        for container_res in containers.values():
+            artifacts_res = [artifact for artifact in self._extended_input_artifacts
+                             if artifact.container.id == container_res.id]
+            ret.append(Container.create_from_rest_resource(container_res, artifacts_res))
+        return ret
+
+    @lazyprop
+    def input_container(self):
+        """Returns the input container. If there are more than one, an error is raised"""
+        return utils.single(self._extended_input_containers)
 
     def cleanup(self):
         """Cleans up any downloaded resources. This method will be automatically
@@ -140,9 +162,38 @@ class ExtensionContext:
         for path in self._local_shared_files:
             if os.path.exists(path):
                 self.logger.info("Local shared file '{}' will be removed to ensure "
-                                 "that it won't be uploaded again")
+                                 "that it won't be uploaded again".format(path))
                 # TODO: Handle exception
                 os.remove(path)
+
+    def local_shared_xml(self, name):
+        """
+        Returns a local copy of the xml file as a Python object
+        """
+        with self.local_shared_file(name, "r") as fs:
+            tree = objectify.parse(fs)
+            return tree.getroot()
+
+    def output_result_file_by_id(self, id):
+        """Returns the output result file by id"""
+        resource = [f for f in self.output_result_files if f.id == id][0]
+        return ResultFile(resource, self.units)
+
+    @property
+    def output_result_files(self):
+        for _, output in self.current_step.input_output_maps:
+            if output["output-type"] == "ResultFile":
+                yield output["uri"]
+
+    def update(self, obj):
+        """Add an object that has a commit method to the list of objects to update"""
+        self._update_queue.append(obj)
+
+    def commit(self):
+        """Commits all objects that have been added via the update method, using batch processing if possible"""
+        # TODO: Implement batch processing
+        for obj in self._update_queue:
+            obj.commit()
 
 
 class MatchedAnalytes:
@@ -189,9 +240,17 @@ class Advanced:
         self.lims = lims
 
     def get(self, endpoint):
-        """Executes a GET via the REST interface. One should rather use the lims property.
-        The endpoint is the part after /api/v2/ in the API URI.
+        """Executes a GET via the REST interface. One should rather use the lims attribute if possible.
+        The endpoint is the part after /api/<version>/ in the API URI.
         """
         url = "{}/api/v2/{}".format(BASEURI, endpoint)
         return requests.get(url, auth=(USERNAME, PASSWORD))
+
+
+class ClarityService:
+    """A wrapper around connections to the lims. Provided for testability"""
+    def __init__(self, api, current_step):
+        self.api = api
+        api.check_version()
+        self.current_step = Process(self.api, id=current_step)
 

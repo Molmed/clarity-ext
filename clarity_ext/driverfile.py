@@ -28,10 +28,12 @@ class DriverFileService:
             self.logger.debug("Creating directories {}".format(root))
             os.makedirs(root)
         full_path = os.path.join(root, self.extension.filename())
-        with open(full_path, 'w') as f:
+        # The file needs to be openeded in binary form to ensure that Windows line endings are used if specified
+        with open(full_path, 'wb') as f:
             self.logger.debug("Writing output to {}.".format(full_path))
+            newline = self.extension.newline()
             for line in self.extension.content():
-                f.write(line + "\n")
+                f.write(line + newline)
         return full_path
 
     def _upload(self, local_file, commit, artifacts_to_stdout):
@@ -41,12 +43,11 @@ class DriverFileService:
         self.logger.debug("Shared file from extension: {}".format(
             self.extension.shared_file()))
         artifacts = [shared_file for shared_file in self.extension.context.shared_files
-                    if shared_file.name == self.extension.shared_file()]
+                     if shared_file.name == self.extension.shared_file()]
         assert len(artifacts) == 1
         artifact = artifacts[0]
 
         self.logger.info("Uploading local file {} to the LIMS placeholder at {}".format(local_file, artifact.id))
-        #output_file_resource = self._get_output_file_resource()
         if commit:
             # Find the output on the current step
             self.logger.info("Uploading to the LIMS server")
@@ -68,17 +69,6 @@ class DriverFileService:
             with open(local_file, 'r') as f:
                 print f.read()
             print "---"
-
-    def _get_output_file_resource(self):
-        outputs = list(self.current_step.all_outputs())
-        output_file_resources = [output for output in outputs if output.id == self.lims_file]
-        assert len(output_file_resources) <= 1
-        if len(output_file_resources) == 0:
-            available = [output_file.id for output_file in outputs]
-            message = "Output file '{}' not found. Available IDs on the step: {}" \
-                .format(self.lims_file, ", ".join(available))
-            raise OutputFileNotFound(message)
-        return output_file_resources[0]
 
 
 class DriverFileIntegrationTests:
@@ -126,10 +116,6 @@ class FrozenFileNotFoundException(Exception):
 
 
 class UnexpectedNumberOfFilesException(Exception):
-    pass
-
-
-class OutputFileNotFound(Exception):
     pass
 
 

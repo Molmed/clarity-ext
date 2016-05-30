@@ -1,6 +1,6 @@
 import unittest
-from clarity_ext.utility.hamilton_driver_file_reader import HamiltonReader as FileReader
-from clarity_ext.utility.hamilton_driver_file_reader import HamiltonColumnReference as ColumnRef
+from clarity_ext.utility.hamilton_driver_file_reader import HamiltonReader
+from clarity_ext.utility.hamilton_driver_file_reader import HamiltonColumnReference
 import textwrap
 
 SAMPLE1 = "EdvardProv60"
@@ -17,14 +17,14 @@ class HamiltonTests(unittest.TestCase):
     """
 
     def setUp(self):
-        self.column_ref = ColumnRef()
+        self.column_ref = HamiltonColumnReference()
         driver_file_contents = """\
                                   EdvardProv60	36	DNA1	14.9	5.1	34	END1
                                   EdvardProv61	33	DNA2	14.9	5.1	17	END2
                                   EdvardProv62	50	DNA2	14.9	5.1	44	END1
                                   EdvardProv63	93	DNA2	14.9	5.1	69	END2"""
         driver_file_contents = textwrap.dedent(driver_file_contents)
-        self.hamilton_reader = FileReader(driver_file_contents)
+        self.hamilton_reader = HamiltonReader(driver_file_contents)
 
     def test_import_hamilton_reader(self):
         self.assertIsNotNone(self.hamilton_reader,

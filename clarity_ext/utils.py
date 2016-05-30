@@ -2,6 +2,7 @@ import requests_cache
 import os
 import shutil
 
+
 # http://stackoverflow.com/a/3013910/282024
 def lazyprop(fn):
     attr_name = '_lazy_' + fn.__name__
@@ -16,6 +17,7 @@ def lazyprop(fn):
 default_dbdict_set_item = requests_cache.backends.storage.dbdict.DbPickleDict.__setitem__
 default_dbdict_get_item = requests_cache.backends.storage.dbdict.DbPickleDict.__getitem__
 AUTH_HEADER = 'Authorization'
+
 
 def dbdict_set_item(self, key, item):
     store = item[0]
@@ -37,7 +39,6 @@ requests_cache.backends.storage.dbdict.DbPickleDict.__getitem__ = dbdict_get_ite
 
 
 def use_requests_cache(cache):
-    # TODO: Before we start to "freeze" results, ensure that the auth token is not cached
     requests_cache.install_cache(cache, allowable_methods=('GET', 'POST', 'DELETE', 'PUT'))
 
 
@@ -51,3 +52,9 @@ def clean_directory(path, skip=[]):
         else:
             os.remove(item)
 
+
+def single(seq):
+    """Returns the first element in a list, throwing an exception if there is an unexpected number of items"""
+    if len(seq) != 1:
+        raise Exception("Unexpected number of items in the list ({})".format(len(seq)))
+    return seq[0]
