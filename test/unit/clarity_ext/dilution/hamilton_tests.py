@@ -24,11 +24,6 @@ class HamiltonTests(unittest.TestCase):
         extension = Extension(self.mock.context)
         driver_file_contents = "\n".join([row_ for row_ in extension.content()])
         self.column_ref = HamiltonColumnReference()
-        driver_file_contents = """\
-                                  EdvardProv60	36	DNA1	14.9	5.1	34	END1
-                                  EdvardProv61	33	DNA2	14.9	5.1	17	END2
-                                  EdvardProv62	50	DNA2	14.9	5.1	44	END1
-                                  EdvardProv63	93	DNA2	14.9	5.1	69	END2"""
         driver_file_contents = textwrap.dedent(driver_file_contents)
         self.hamilton_reader = HamiltonReader(driver_file_contents)
 
