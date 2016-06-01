@@ -1,6 +1,6 @@
 from genologics.entities import *
 from genologics.lims import Lims
-from clarity_ext.context import FakingEntityMonkey
+from test.unit.clarity_ext.mock.tweak_genologics import PrepareMocking
 from clarity_ext.context import ExtensionContext
 from clarity_ext.context import ClarityService
 from abc import abstractmethod
@@ -9,7 +9,7 @@ from abc import abstractmethod
 class MockBase:
 
     def __init__(self):
-        self.monkey = FakingEntityMonkey()
+        self.monkey = PrepareMocking()
         self.lims = Lims("xxx", "xxx", "xxx")
         self.process = Process(self.lims, id="123")
         clarity_svc = ClarityService(self.lims, "123")
