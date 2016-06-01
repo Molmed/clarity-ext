@@ -1,13 +1,15 @@
-from genologics.config import BASEURI, USERNAME, PASSWORD
-from genologics.entities import *
-import requests
 import os
-from clarity_ext.dilution import *
 import re
 import shutil
-import clarity_ext.utils as utils
+
+import requests
+from genologics.config import BASEURI, USERNAME, PASSWORD
+from genologics.entities import *
 from lxml import objectify
+
+import clarity_ext.utils as utils
 from clarity_ext import UnitConversion
+from clarity_ext.dilution import *
 from clarity_ext.result_file import ResultFile
 from clarity_ext.utils import lazyprop
 
@@ -29,7 +31,6 @@ class ExtensionContext:
         self.logger = logger or logging.getLogger(__name__)
         self._local_shared_files = []
         self.cache = cache
-
         self.units = UnitConversion(self.logger)
         self._update_queue = []
         self.current_step = clarity_svc.current_step
