@@ -46,7 +46,3 @@ class TestArtifact(unittest.TestCase):
             ]
         analytes = two_identical_analytes()
         self.assertNotEqual(analytes[0], analytes[1])
-
-    def test_backward_udf_map_empty_if_no_udf_map(self):
-        artifact = Artifact()
-        self.assertEqual(artifact.udf_backward_map, dict())

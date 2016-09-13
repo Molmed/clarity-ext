@@ -5,8 +5,8 @@ from clarity_ext.domain.artifact import Artifact
 class ResultFile(Artifact):
     """Encapsulates a ResultFile in Clarity"""
 
-    def __init__(self, api_resource, units, artifact_specific_udf_map, id=None):
-        super(self.__class__, self).__init__(api_resource, artifact_specific_udf_map)
+    def __init__(self, api_resource, units, id=None):
+        super(self.__class__, self).__init__(api_resource)
         self.units = units
         self.id = id
 
@@ -17,9 +17,8 @@ class ResultFile(Artifact):
         The container is fetched from the container_repo.
         """
 
-        result_file_udf_map = udf_map.get('ResultFile', None)
         ret = ResultFile(api_resource=resource,
-                         units=UnitConversion(), artifact_specific_udf_map=result_file_udf_map, id=resource.id)
+                         units=UnitConversion(), id=resource.id)
 
         try:
             container_resource = resource.location[0]

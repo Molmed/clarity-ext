@@ -40,16 +40,6 @@ class DomainObjectMixin(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def differing_fields(self, other):
-        if isinstance(other, self.__class__):
-            ret = []
-            for key in self.__dict__:
-                if self.__dict__.get(key, None) != other.__dict__.get(key, None):
-                    ret.append(key)
-            return ret
-        else:
-            return None
-
 
 class AssignLogger(DomainObjectMixin):
     def __init__(self, domain_object_mixin):
