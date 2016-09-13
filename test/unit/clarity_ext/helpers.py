@@ -22,7 +22,8 @@ def fake_analyte(container_id=None, artifact_id=None, sample_id=None, analyte_na
     pos = ContainerPosition.create(well_key)
     well = Well(pos, container)
     sample = Sample(sample_id)
-    analyte = Analyte(analyte_name, well, sample, **kwargs)
+    api_resource = None
+    analyte = Analyte(api_resource, analyte_name, well, sample, **kwargs)
     analyte.id = artifact_id
     analyte.is_input = is_input
     analyte.generation_type = Artifact.PER_INPUT

@@ -2,7 +2,6 @@ from clarity_ext.domain.artifact import Artifact
 from clarity_ext.domain.analyte import Analyte
 from clarity_ext.domain.result_file import ResultFile
 from clarity_ext.repository.container_repository import ContainerRepository
-from clarity_ext.utils import flatten
 from genologics.entities import Artifact as ApiArtifact
 import copy
 
@@ -123,7 +122,7 @@ class StepRepository(object):
         if artifact.type == "Analyte":
             return Analyte.create_from_rest_resource(artifact, self.udf_map, container_repo)
         elif artifact.type == "ResultFile":
-            return ResultFile.create_from_rest_resource(artifact, container_repo)
+            return ResultFile.create_from_rest_resource(artifact, self.udf_map, container_repo)
         else:
             raise Exception("Unknown type {}".format(artifact.type))
 
@@ -133,25 +132,20 @@ class StepRepository(object):
 
     def update_artifacts(self, artifacts):
         """
-        Updates each entry in objects to db, which must have the function
-        updated_rest_resource
+        Updates each entry in objects to db
         """
         update_queue = []
         response = []
         for artifact in artifacts:
             updated_fields = self._retrieve_updated_fields(artifact)
-            if type(artifact) == Analyte:
-                original_analyte_from_rest = ApiArtifact(self.session.api, id=artifact.id)
-                updated_rest_resource, single_response = \
-                    artifact.updated_rest_resource(original_analyte_from_rest, self.udf_map, updated_fields)
-                response.append(single_response)
-                update_queue.append(updated_rest_resource)
-            elif type(artifact) == ResultFile:
-                api_resources = [artifact.api_resource for artifact in artifacts]
-                update_queue.append(api_resources)
+            original_analyte_from_rest = artifact.api_resource
+            updated_rest_resource, single_response = \
+                artifact.updated_rest_resource(original_analyte_from_rest, self.udf_map, updated_fields)
+            response.append(single_response)
+            update_queue.append(updated_rest_resource)
 
         self.session.api.put_batch(update_queue)
-        return flatten(response)
+        return sum(response, [])
 
     def _retrieve_updated_fields(self, updated_artifact):
         orig_art = self.orig_state_cache[updated_artifact.id]

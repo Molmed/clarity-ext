@@ -5,31 +5,21 @@ from clarity_ext.domain.artifact import Artifact
 class ResultFile(Artifact):
     """Encapsulates a ResultFile in Clarity"""
 
-    def __init__(self, api_resource, units, id=None):
-        super(self.__class__, self).__init__()
-        self.api_resource = api_resource
+    def __init__(self, api_resource, units, artifact_specific_udf_map, id=None):
+        super(self.__class__, self).__init__(api_resource, artifact_specific_udf_map)
         self.units = units
         self.id = id
 
-    def commit(self):
-        self.api_resource.put()
-
-    def set_udf(self, name, value, from_unit=None, to_unit=None):
-        if from_unit:
-            value = self.units.convert(value, from_unit, to_unit)
-        self.api_resource.udf[name] = value
-
-    def get_udf(self, name):
-        return self.api_resource.udf[name]
-
     @staticmethod
-    def create_from_rest_resource(resource, container_repo):
+    def create_from_rest_resource(resource, udf_map, container_repo):
         """
         Creates a `ResultFile` from the REST resource object.
         The container is fetched from the container_repo.
         """
+
+        result_file_udf_map = udf_map.get('ResultFile', None)
         ret = ResultFile(api_resource=resource,
-                         units=UnitConversion(), id=resource.id)
+                         units=UnitConversion(), artifact_specific_udf_map=result_file_udf_map, id=resource.id)
 
         try:
             container_resource = resource.location[0]

@@ -130,6 +130,6 @@ class ExtensionContext(object):
 
     def commit(self):
         """Commits all objects that have been added via the update method, using batch processing if possible"""
-        return self.artifact_service.update_artifacts(self._update_queue)
+        self.response = self.artifact_service.update_artifacts(self._update_queue)
 
 
