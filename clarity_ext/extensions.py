@@ -2,18 +2,19 @@ from __future__ import print_function
 import importlib
 import os
 import shutil
-from clarity_ext.driverfile import GeneralFileService, DriverFileService, ResponseFileService
+from clarity_ext.driverfile import DriverFileService, ResponseFileService
 from clarity_ext.driverfile import OSService
 from context import ExtensionContext
 import clarity_ext.utils as utils
 from abc import ABCMeta, abstractmethod
 import logging
 import difflib
-import re
 from clarity_ext.utils import lazyprop
 from clarity_ext import ClaritySession
 from clarity_ext.repository import StepRepository
 from clarity_ext.service import ArtifactService
+from test.integration.integration_test_service import IntegrationTest
+from clarity_ext.repository.step_repository import DEFAULT_UDF_MAP
 
 
 # Defines all classes that are expected to be extended. These are
@@ -49,6 +50,8 @@ class ExtensionService(object):
             raise ValueError("Unexpected mode")
 
     def _parse_run_argument(self, in_argument):
+        if isinstance(in_argument, IntegrationTest):
+            in_argument = in_argument.run_argument_dict
         if isinstance(in_argument, str):
             return {"pid": in_argument}
         elif isinstance(in_argument, dict):
@@ -67,6 +70,11 @@ class ExtensionService(object):
             return run_arguments["shared_file"]
         else:
             return extension.shared_file()
+
+    def _artifact_service(self, pid):
+        session = ClaritySession.create(pid)
+        step_repo = StepRepository(session, DEFAULT_UDF_MAP)
+        return ArtifactService(step_repo)
 
     def execute(self, module, mode, run_arguments_list=None, config=None, artifacts_to_stdout=True,
                 print_help=True, use_cache=None):
@@ -107,6 +115,11 @@ class ExtensionService(object):
         instance = extension(None)
 
         if not run_arguments_list and (mode == self.RUN_MODE_TEST or mode == self.RUN_MODE_FREEZE):
+            for integration_test in instance.integration_tests():
+                if isinstance(integration_test, IntegrationTest) and integration_test.preparer:
+                    artifact_service = self._artifact_service(integration_test.pid())
+                    integration_test.preparer.prepare(artifact_service)
+
             run_arguments_list = map(self._parse_run_argument, instance.integration_tests())
             if len(run_arguments_list) == 0:
                 print("WARNING: No integration tests defined. Not able to test.")
