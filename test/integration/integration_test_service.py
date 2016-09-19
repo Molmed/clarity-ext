@@ -10,16 +10,15 @@ class IntegrationTest:
             self.run_argument_dict.update(run_argument_dict)
 
         if update_matrix:
-            self.preparer = IntegrationTestPrepare(update_matrix, self.pid)
+            self.preparer = IntegrationTestPrepare(update_matrix)
 
     def pid(self):
         return self.run_argument_dict["pid"]
 
 
 class IntegrationTestPrepare:
-    def __init__(self, update_matrix, pid):
+    def __init__(self, update_matrix):
         self.update_matrix = update_matrix
-        self.pid = pid
 
     def prepare(self, artifact_service):
         input_artifacts = artifact_service.all_input_artifacts()
