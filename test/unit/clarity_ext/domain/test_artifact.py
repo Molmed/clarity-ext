@@ -46,4 +46,3 @@ class TestArtifact(unittest.TestCase):
             ]
         analytes = two_identical_analytes()
         self.assertNotEqual(analytes[0], analytes[1])
-

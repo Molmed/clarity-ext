@@ -1,4 +1,5 @@
 from __builtin__ import isinstance
+import copy
 
 
 class DomainObjectMixin(object):
@@ -39,18 +40,8 @@ class DomainObjectMixin(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def differing_fields(self, other):
-        if isinstance(other, self.__class__):
-            ret = []
-            for key in self.__dict__:
-                if self.__dict__[key] != other.__dict__[key]:
-                    ret.append(key)
-            return ret
-        else:
-            return None
 
-
-class AssignLogger:
+class AssignLogger(DomainObjectMixin):
     def __init__(self, domain_object_mixin):
         self.log = []
         self.domain_object_mixin = domain_object_mixin
@@ -60,3 +51,8 @@ class AssignLogger:
         lims_id = self.domain_object_mixin.id
         self.log.append((class_name, lims_id, field_name, str(value)))
         return value
+
+    def consume(self):
+        log_output = copy.copy(self.log)
+        self.log = []
+        return log_output

@@ -1,4 +1,5 @@
 from clarity_ext.domain.common import DomainObjectMixin
+from clarity_ext.domain.common import AssignLogger
 
 
 class Artifact(DomainObjectMixin):
@@ -13,9 +14,22 @@ class Artifact(DomainObjectMixin):
     OUTPUT_TYPE_ANALYTE = 2
     OUTPUT_TYPE_SHARED_RESULT_FILE = 3
 
-    def __init__(self):
+    def __init__(self, api_resource=None):
         self.is_input = None  # Set to true if this is an input artifact
         self.generation_type = None  # Set to PER_INPUT or PER_ALL_INPUTS if applicable
+        self.assigner = AssignLogger(self)
+        self.api_resource = api_resource
+
+    def set_udf(self, name, value, from_unit=None, to_unit=None):
+        if from_unit:
+            value = self.units.convert(value, from_unit, to_unit)
+        self.api_resource.udf[name] = self.assigner.log_assign(name, value)
+
+    def get_udf(self, name):
+        return self.api_resource.udf[name]
+
+    def commit(self):
+        self.api_resource.put()
 
 
 class ArtifactPair(DomainObjectMixin):

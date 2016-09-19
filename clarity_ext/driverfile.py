@@ -162,7 +162,7 @@ class ResponseFileService:
 
     def content(self):
         self.extension.execute()
-        for row in self.extension.response:
+        for row in self.extension.context.response:
             yield "\t".join(row)
 
     def file_key(self, file_name):
