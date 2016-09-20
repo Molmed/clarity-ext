@@ -65,10 +65,8 @@ class Artifact(DomainObjectMixin):
                                for key in self.udf_map if key in updated_fields}
         # Retrieve fields that are updated, only these field should be included in the rest update
         for key in values_by_udf_names:
-            if _updated_rest_resource.udf.get(key, None):
-                original_type = type(_updated_rest_resource.udf[key])
-                value = get_and_apply(values_by_udf_names, key, None, original_type)
-                _updated_rest_resource.udf[key] = self.assigner.register_assign(key, value)
+            value = values_by_udf_names[key]
+            _updated_rest_resource.udf[key] = self.assigner.register_assign(key, value)
 
         return _updated_rest_resource
 
