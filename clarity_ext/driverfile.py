@@ -95,11 +95,12 @@ class GeneralFileService(object):
 
 
 class DriverFileService:
-    def __init__(self, extension, os_service, logger=None):
+    def __init__(self, extension, shared_file_name, os_service, logger=None):
         self.extension = extension
         self.logger = logger
         self.local_file = None
         self.os_service = os_service
+        self.shared_file_name = shared_file_name
 
     def commit(self):
         # Find the output on the current step
@@ -134,13 +135,13 @@ class DriverFileService:
     @lazyprop
     def artifact(self):
         artifacts = [shared_file for shared_file in self.extension.context.shared_files
-                     if shared_file.name == self.extension.shared_file()]
+                     if shared_file.name == self.shared_file_name]
         assert len(artifacts) == 1
         return artifacts[0]
 
     @staticmethod
-    def create_file_service(instance, logger, os_service):
-        driver_file_service = DriverFileService(instance, os_service, logger)
+    def create_file_service(instance, shared_file_name, logger, os_service):
+        driver_file_service = DriverFileService(instance, shared_file_name, os_service, logger)
         return GeneralFileService(driver_file_service, ".", os_service)
 
 
