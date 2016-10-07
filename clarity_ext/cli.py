@@ -6,6 +6,7 @@ from clarity_ext.integration import IntegrationTestService
 from clarity_ext.extensions import ExtensionService
 import os
 import yaml
+import time
 
 config = None
 logger = None
@@ -36,6 +37,10 @@ def validate(module):
     """
     Validates the extension if there exists frozen data for it.
     Can use regex to match extensions.
+
+    Note that during development, one may have stray *.pyc files
+    hanging around (that don't have a corresponding *.py file)
+    so they need to be cleaned before calling
     """
     import time
     t1 = time.time()
