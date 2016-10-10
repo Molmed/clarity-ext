@@ -1,6 +1,5 @@
-import requests_cache
 import unittest
-from clarity_ext.domain import Container, ResultFile
+from clarity_ext.domain import Container, ResultFile, SharedResultFile
 from clarity_ext.context import ExtensionContext
 import os
 
@@ -54,7 +53,7 @@ class TestIntegrationAnalyteRepository(unittest.TestCase):
         context = ExtensionContext.create("24-3144")
         result = context.output_result_file_by_id("92-5244")
         self.assertIsNotNone(result)
-        self.assertIsInstance(result, ResultFile)
+        self.assertIsInstance(result, SharedResultFile)
 
     @unittest.skip("Step removed")
     def test_can_read_xml(self):

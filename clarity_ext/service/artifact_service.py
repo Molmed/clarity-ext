@@ -88,7 +88,6 @@ class ArtifactService:
         files = (outp for outp in outputs
                  if outp.output_type == Artifact.OUTPUT_TYPE_RESULT_FILE)
         ret = list(utils.unique(files, lambda f: f.id))
-        assert len(ret) == 0 or isinstance(ret[0], ResultFile)
         return ret
 
     def output_file_by_id(self, file_id):
