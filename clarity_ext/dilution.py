@@ -102,10 +102,10 @@ class SingleTransfer(object):
         self.target_aliquot_name = destination_endpoint.aliquot_name
 
     def __str__(self):
-        source = "source({}/{}, conc={})".format(self.source_container,
-                                                 self.source_well, self.source_concentration)
-        target = "target({}/{}, conc={}, vol={})".format(self.target_container, self.target_well,
-                                                         self.requested_concentration, self.requested_volume)
+        source = "source({}, conc={})".format(
+            self.source_well, self.source_concentration)
+        target = "target({}, conc={}, vol={})".format(self.target_well,
+                                                      self.requested_concentration, self.requested_volume)
         return "{} => {}".format(source, target)
 
     def __repr__(self):
@@ -226,7 +226,8 @@ class DilutionScheme(object):
         self.transfers = self._filtered_transfers(
             all_transfers=all_transfers, include_blanks=include_blanks)
 
-        self.aliquot_pair_by_transfer = self._map_pair_and_transfers(pairs=pairs)
+        self.aliquot_pair_by_transfer = self._map_pair_and_transfers(
+            pairs=pairs)
         self.robot_deck_positioner = RobotDeckPositioner(
             robot_name, self.transfers, container.size)
 

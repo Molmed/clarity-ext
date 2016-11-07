@@ -35,23 +35,23 @@ class UpdateFieldsForDilutionTests(unittest.TestCase):
         return dilution_scheme, context
 
     def _update_fields(self, dilution_scheme, context):
-        analyte_pair_by_dilute = dilution_scheme.aliquot_pair_by_transfer
-        for dilute in dilution_scheme.transfers:
+        aliquot_pair_by_transfer = dilution_scheme.aliquot_pair_by_transfer
+        for transfer in dilution_scheme.transfers:
             # Make preparation, fetch the analyte to be updated
-            source_analyte = analyte_pair_by_dilute[dilute].input_artifact
-            destination_analyte = analyte_pair_by_dilute[
-                dilute].output_artifact
+            source_analyte = aliquot_pair_by_transfer[transfer].input_artifact
+            destination_analyte = aliquot_pair_by_transfer[
+                transfer].output_artifact
 
             # Update fields for analytes
-            source_analyte.set_udf("volume", dilute.source_initial_volume -
-                                   dilute.sample_volume - DILUTION_WASTE_VOLUME)
+            source_analyte.set_udf("volume", transfer.source_initial_volume -
+                                   transfer.sample_volume - DILUTION_WASTE_VOLUME)
 
-            destination_analyte.set_udf("conc", dilute.sample_volume *
-                                        dilute.source_concentration /
-                                        (dilute.sample_volume + dilute.buffer_volume))
+            destination_analyte.set_udf("conc", transfer.sample_volume *
+                                        transfer.source_concentration /
+                                        (transfer.sample_volume + transfer.buffer_volume))
 
             destination_analyte.set_udf(
-                "volume", dilute.sample_volume + dilute.buffer_volume)
+                "volume", transfer.sample_volume + transfer.buffer_volume)
 
             context.update(source_analyte)
             context.update(destination_analyte)
