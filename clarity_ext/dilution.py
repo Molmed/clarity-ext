@@ -101,6 +101,13 @@ class SingleTransfer(object):
         self.requested_volume = destination_endpoint.requested_volume
         self.target_aliquot_name = destination_endpoint.aliquot_name
 
+    def identifier(self):
+        source = "source({}, conc={})".format(
+            self.source_well, self.source_concentration)
+        target = "target({}, conc={}, vol={})".format(self.target_well,
+                                                      self.requested_concentration, self.requested_volume)
+        return "{} => {}".format(source, target)
+
     def __str__(self):
         source = "source({}, conc={})".format(
             self.source_well, self.source_concentration)
@@ -267,8 +274,17 @@ class DilutionScheme(object):
         return transfers
 
     def _map_pair_and_transfers(self, pairs):
+        """
+        :param pairs: input artifact --- output artifact pair
+        :return: A function returning an artifact pair, given a transfer object
+        """
         pair_dict = {id(pair): pair for pair in pairs}
-        return {transfer: pair_dict[transfer.pair_id] for transfer in self.transfers}
+
+        def pair_by_transfer(transfer):
+            by_transfer_dict = {transfer.identifier: pair_dict[
+                transfer.pair_id] for transfer in self.transfers}
+            return by_transfer_dict[transfer.identifier]
+        return pair_by_transfer
 
     def calculate_transfer_volumes(self):
         # Handle volumes etc.

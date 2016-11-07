@@ -38,9 +38,9 @@ class UpdateFieldsForDilutionTests(unittest.TestCase):
         aliquot_pair_by_transfer = dilution_scheme.aliquot_pair_by_transfer
         for transfer in dilution_scheme.transfers:
             # Make preparation, fetch the analyte to be updated
-            source_analyte = aliquot_pair_by_transfer[transfer].input_artifact
-            destination_analyte = aliquot_pair_by_transfer[
-                transfer].output_artifact
+            source_analyte = aliquot_pair_by_transfer(transfer).input_artifact
+            destination_analyte = aliquot_pair_by_transfer(
+                transfer).output_artifact
 
             # Update fields for analytes
             source_analyte.set_udf("volume", transfer.source_initial_volume -
@@ -64,8 +64,8 @@ class UpdateFieldsForDilutionTests(unittest.TestCase):
         self._update_fields(dilution_scheme, context)
         dilute = dilution_scheme.transfers[-1]
         expected = 29.0
-        outcome = dilution_scheme.aliquot_pair_by_transfer[
-            dilute].input_artifact.volume
+        outcome = dilution_scheme.aliquot_pair_by_transfer(
+            dilute).input_artifact.volume
         print(dilute.aliquot_name)
         self.assertEqual(expected, outcome)
 
@@ -75,8 +75,8 @@ class UpdateFieldsForDilutionTests(unittest.TestCase):
         self._update_fields(dilution_scheme, context)
         source_volume_sum = 0
         for dilute in dilution_scheme.transfers:
-            outcome = dilution_scheme.aliquot_pair_by_transfer[
-                dilute].input_artifact.volume
+            outcome = dilution_scheme.aliquot_pair_by_transfer(
+                dilute).input_artifact.volume
             source_volume_sum += outcome
         expected_sum = 57.0
         self.assertEqual(expected_sum, source_volume_sum)
@@ -87,7 +87,7 @@ class UpdateFieldsForDilutionTests(unittest.TestCase):
         self._update_fields(dilution_scheme, context)
         aliquot_pair_by_transfer = dilution_scheme.aliquot_pair_by_transfer
         for transfer in dilution_scheme.transfers:
-            source_aliquot = aliquot_pair_by_transfer[transfer].input_artifact
+            source_aliquot = aliquot_pair_by_transfer(transfer).input_artifact
             print("transfer sample name: {}".format(transfer.aliquot_name))
             print("source aliquot sample name: {}".format(source_aliquot.name))
             self.assertEqual(transfer.aliquot_name, source_aliquot.name)
