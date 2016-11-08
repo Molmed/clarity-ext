@@ -1,6 +1,5 @@
 import copy
 from clarity_ext.utils import get_and_apply
-from itertools import groupby
 from clarity_ext.dilution_strategies import *
 
 DILUTION_WASTE_VOLUME = 1
@@ -243,18 +242,6 @@ class DilutionScheme(object):
         self.split_row_transfers = self.split_up_high_volume_rows(
             self.sort_transfers(self._transfers))
         self.unsplit_transfers = self.sort_transfers(self._transfers)
-        self.grouped_transfers = list(self._grouped_transfers())
-
-    def _grouped_transfers(self):
-        """
-        Sometimes a sample transfer from source A to destination B is
-        split up on several rows, due to the max pipetting volume of 50 ul.
-        :return: An iterable group of transfers for a common destination well.
-        """
-        for key, transfer_group in groupby(
-                self._transfers, key=lambda t: "{}{}".format(
-                    t.target_container, t.target_well.position)):
-            yield list(transfer_group)
 
     def _filtered_transfers(self, all_transfers, include_blanks):
         if include_blanks:
