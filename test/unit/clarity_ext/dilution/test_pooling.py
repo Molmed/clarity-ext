@@ -8,6 +8,7 @@ from clarity_ext.domain.validation import ValidationType
 from test.unit.clarity_ext.helpers import fake_analyte
 from test.unit.clarity_ext.helpers import print_list
 from test.unit.clarity_ext import helpers
+from itertools import groupby
 
 
 UDF_MAP = {
@@ -60,7 +61,7 @@ class TestLibraryPooling(unittest.TestCase):
              round(dilute.sample_volume, 1),
              round(dilute.buffer_volume, 1),
              dilute.target_well_index,
-             dilute.target_plate_pos] for dilute in dilution_scheme.transfers
+             dilute.target_plate_pos] for dilute in dilution_scheme.split_row_transfers
         ]
 
         validation_results = list(post_validate_dilution(dilution_scheme))
@@ -90,7 +91,7 @@ class TestLibraryPooling(unittest.TestCase):
              round(dilute.sample_volume, 1),
              round(dilute.buffer_volume, 1),
              dilute.target_well_index,
-             dilute.target_plate_pos] for dilute in dilution_scheme.transfers
+             dilute.target_plate_pos] for dilute in dilution_scheme.split_row_transfers
         ]
 
         validation_results = list(post_validate_dilution(dilution_scheme))
@@ -314,7 +315,7 @@ class TestLibraryPooling(unittest.TestCase):
             ["Warning: Pool1, volume has been scaled up due to the min pipetting volume of 2 ul (cont2(B4))."])
         self.assertEqual(expected, actual)
 
-    def test_scaled_up_and_splitted_rows(self):
+    def test_scaled_up_and_split_rows(self):
         def invalid_analyte_set():
             samples = ["sample1", "sample2", "sample3"]
             pool1 = fake_analyte("cont2", "art4", samples, "Pool1", "B:4",
@@ -367,7 +368,7 @@ class TestLibraryPooling(unittest.TestCase):
              round(dilute.sample_volume, 1),
              round(dilute.buffer_volume, 1),
              dilute.target_well_index,
-             dilute.target_plate_pos] for dilute in dilution_scheme.transfers
+             dilute.target_plate_pos] for dilute in dilution_scheme.split_row_transfers
         ]
 
         print_list(expected, "expected")
@@ -413,7 +414,7 @@ def pre_validate_dilution(dilution_scheme):
     Check that all pertinent variables are initiated so that calculations
     are possible to perform
     """
-    for transfer in dilution_scheme.transfers:
+    for transfer in dilution_scheme.unsplit_transfers:
         if not transfer.source_initial_volume:
             yield ValidationException("{}, source volume is not set.".format(transfer.aliquot_name))
         if not transfer.source_concentration:
@@ -427,10 +428,14 @@ def post_validate_dilution(dilution_scheme):
     def pos_str(transfer):
         return "{}".format(transfer.target_well)
 
-    for g in dilution_scheme.grouped_transfers:
-        total_volume = sum(map(lambda t: t.sample_volume +
-                               t.buffer_volume, g))
+    sorted_transfers = sorted(
+        dilution_scheme.unsplit_transfers, key=lambda t: t.target_aliquot_name)
+    grouped_transfers = groupby(
+        sorted_transfers, key=lambda t: t.target_aliquot_name)
 
+    for key, g in grouped_transfers:
+        g = list(g)
+        total_volume = sum(map(lambda t: t.sample_volume + t.buffer_volume, g))
         if total_volume > 100:
             yield ValidationException("{}, too high destination volume ({}).".format(
                 g[0].target_aliquot_name, pos_str(g[0])))

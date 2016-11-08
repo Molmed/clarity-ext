@@ -230,18 +230,19 @@ class DilutionScheme(object):
         container = pairs[0].output_artifact.container
         all_transfers = self._create_transfers(
             pairs, concentration_ref=concentration_ref)
-        self.transfers = self._filtered_transfers(
+        self._transfers = self._filtered_transfers(
             all_transfers=all_transfers, include_blanks=include_blanks)
 
         self.aliquot_pair_by_transfer = self._map_pair_and_transfers(
             pairs=pairs)
         self.robot_deck_positioner = RobotDeckPositioner(
-            robot_name, self.transfers, container.size)
+            robot_name, self._transfers, container.size)
 
         self.calculate_transfer_volumes()
-        self.transfers = self.split_up_high_volume_rows(self.transfers)
         self.do_positioning()
-        self.transfers = self.sort_transfers(self.transfers)
+        self.split_row_transfers = self.split_up_high_volume_rows(
+            self.sort_transfers(self._transfers))
+        self.unsplit_transfers = self.sort_transfers(self._transfers)
         self.grouped_transfers = list(self._grouped_transfers())
 
     def _grouped_transfers(self):
@@ -251,7 +252,7 @@ class DilutionScheme(object):
         :return: An iterable group of transfers for a common destination well.
         """
         for key, transfer_group in groupby(
-                self.transfers, key=lambda t: "{}{}".format(
+                self._transfers, key=lambda t: "{}{}".format(
                     t.target_container, t.target_well.position)):
             yield list(transfer_group)
 
@@ -282,14 +283,14 @@ class DilutionScheme(object):
 
         def pair_by_transfer(transfer):
             by_transfer_dict = {transfer.identifier: pair_dict[
-                transfer.pair_id] for transfer in self.transfers}
+                transfer.pair_id] for transfer in self._transfers}
             return by_transfer_dict[transfer.identifier]
         return pair_by_transfer
 
     def calculate_transfer_volumes(self):
         # Handle volumes etc.
         self.volume_calc_strategy.calculate_transfer_volumes(
-            transfers=self.transfers, scale_up_low_volumes=self.scale_up_low_volumes)
+            transfers=self._transfers, scale_up_low_volumes=self.scale_up_low_volumes)
 
     def split_up_high_volume_rows(self, transfers):
         """
@@ -389,7 +390,7 @@ class DilutionScheme(object):
 
     def do_positioning(self):
         # Handle positioning
-        for transfer in self.transfers:
+        for transfer in self._transfers:
             transfer.source_well_index = self.robot_deck_positioner.indexer(
                 transfer.source_well)
             transfer.source_plate_pos = self.robot_deck_positioner. \
