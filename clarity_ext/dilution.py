@@ -239,9 +239,9 @@ class DilutionScheme(object):
             robot_name, self.transfers, container.size)
 
         self.calculate_transfer_volumes()
-        self.split_up_high_volume_rows()
+        self.transfers = self.split_up_high_volume_rows(self.transfers)
         self.do_positioning()
-        self.sort_transfers()
+        self.transfers = self.sort_transfers(self.transfers)
         self.grouped_transfers = list(self._grouped_transfers())
 
     def _grouped_transfers(self):
@@ -291,14 +291,14 @@ class DilutionScheme(object):
         self.volume_calc_strategy.calculate_transfer_volumes(
             transfers=self.transfers, scale_up_low_volumes=self.scale_up_low_volumes)
 
-    def split_up_high_volume_rows(self):
+    def split_up_high_volume_rows(self, transfers):
         """
         Split up a transfer between source well x and target well y into
         several rows, if sample volume or buffer volume exceeds 50 ul
         :return:
         """
-        added_transfers = []
-        for transfer in self.transfers:
+        split_row_transfers = []
+        for transfer in transfers:
             calculation_volume = max(
                 self._get_volume(transfer.sample_volume), self._get_volume(transfer.buffer_volume))
             (n, residual) = divmod(calculation_volume, PIPETTING_MAX_VOLUME)
@@ -308,24 +308,25 @@ class DilutionScheme(object):
                 total_rows = int(n)
 
             copies = self._create_copies(transfer, total_rows)
-            added_transfers += copies
+            split_row_transfers += copies
             self._split_up_volumes(
-                [transfer] + copies, transfer.sample_volume, transfer.buffer_volume)
+                copies, transfer.sample_volume, transfer.buffer_volume)
 
-        self.transfers += added_transfers
+        return split_row_transfers
 
     @staticmethod
     def _create_copies(transfer, total_rows):
         """
-        Create copies of transfer, if duplication_number > 1,
-        that will cause extra rows in the driver file.
+        Create copies of transfer
+        that will cause extra rows in the driver file if
+        pipetting volume exceeds 50 ul.
         Initiate both buffer volume and sample volume to zero
         :param transfer: The transfer to be copied
         :param total_rows: The total number of rows needed for a
         transfer between source well x and target well y
         :return:
         """
-        copies = []
+        copies = [copy.copy(transfer)]
         for i in xrange(0, total_rows - 1):
             t = copy.copy(transfer)
             t.buffer_volume = 0
@@ -360,22 +361,21 @@ class DilutionScheme(object):
                 t.sample_volume = float(
                     original_sample_volume / number_rows)
 
-    def sort_transfers(self):
+    def sort_transfers(self, transfers):
         def pipetting_volume(transfer):
             return self._get_volume(transfer.buffer_volume) + self._get_volume(transfer.sample_volume)
 
         def max_added_pip_volume():
             volumes = map(lambda t: (self._get_volume(t.buffer_volume),
-                                     self._get_volume(t.sample_volume)), self.transfers)
+                                     self._get_volume(t.sample_volume)), self._transfers)
             return max(map(lambda (buffer_vol, sample_vol): buffer_vol + sample_vol, volumes))
 
         # Sort on source position, and in case of splitted rows, pipetting
         # volumes. Let max pipetting volumes be shown first
         max_vol = max_added_pip_volume()
-        self.transfers = sorted(self.transfers,
-                                key=lambda t:
-                                self.robot_deck_positioner.find_sort_number(t) +
-                                (max_vol - pipetting_volume(t)) / (max_vol + 1.0))
+        return sorted(
+            transfers, key=lambda t: self.robot_deck_positioner.find_sort_number(t) +
+            (max_vol - pipetting_volume(t)) / (max_vol + 1.0))
 
     @staticmethod
     def _get_volume(volume):
