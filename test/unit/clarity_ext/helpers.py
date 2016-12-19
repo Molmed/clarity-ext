@@ -3,6 +3,8 @@ from mock import MagicMock
 from mock import patch
 from mock import PropertyMock
 from clarity_ext.service import ArtifactService, FileService
+from clarity_ext.repository.step_repository import StepRepository
+from clarity_ext.context import ExtensionContext
 from clarity_ext.domain.analyte import Analyte
 from clarity_ext.domain.container import Well
 from clarity_ext.domain.container import ContainerPosition
@@ -116,6 +118,32 @@ def mock_artifact_service(artifact_set):
     repo.all_artifacts = artifact_set
     svc = ArtifactService(repo)
     return svc
+
+
+def mock_step_repository(analyte_set):
+    """
+    To be able to achieve a response matrix containing
+    updates from update_artifacts()
+    :param analyte_set:
+    :return:
+    """
+    session = MagicMock()
+    session.api = MagicMock()
+    step_repo = StepRepository(session=session)
+    step_repo.all_artifacts = analyte_set
+    step_repo._add_to_orig_state_cache(analyte_set())
+    return step_repo
+
+
+def mock_context(artifact_service=None, step_repo=None):
+    session = MagicMock()
+    file_service = MagicMock()
+    current_user = MagicMock()
+    step_logger_service = MagicMock()
+    return ExtensionContext(session=session, artifact_service=artifact_service,
+                            file_service=file_service,
+                            current_user=current_user, step_logger_service=step_logger_service,
+                            step_repo=step_repo)
 
 
 def mock_file_service(artifact_set):

@@ -1,6 +1,5 @@
 import copy
 from clarity_ext.utils import get_and_apply
-from itertools import groupby
 from clarity_ext.dilution_strategies import *
 
 DILUTION_WASTE_VOLUME = 1
@@ -101,11 +100,18 @@ class SingleTransfer(object):
         self.requested_volume = destination_endpoint.requested_volume
         self.target_aliquot_name = destination_endpoint.aliquot_name
 
+    def identifier(self):
+        source = "source({}, conc={})".format(
+            self.source_well, self.source_concentration)
+        target = "target({}, conc={}, vol={})".format(self.target_well,
+                                                      self.requested_concentration, self.requested_volume)
+        return "{} => {}".format(source, target)
+
     def __str__(self):
-        source = "source({}/{}, conc={})".format(self.source_container,
-                                                 self.source_well, self.source_concentration)
-        target = "target({}/{}, conc={}, vol={})".format(self.target_container, self.target_well,
-                                                         self.requested_concentration, self.requested_volume)
+        source = "source({}, conc={})".format(
+            self.source_well, self.source_concentration)
+        target = "target({}, conc={}, vol={})".format(self.target_well,
+                                                      self.requested_concentration, self.requested_volume)
         return "{} => {}".format(source, target)
 
     def __repr__(self):
@@ -223,29 +229,19 @@ class DilutionScheme(object):
         container = pairs[0].output_artifact.container
         all_transfers = self._create_transfers(
             pairs, concentration_ref=concentration_ref)
-        self.transfers = self._filtered_transfers(
+        self._transfers = self._filtered_transfers(
             all_transfers=all_transfers, include_blanks=include_blanks)
 
-        self.aliquot_pair_by_transfer = self._map_pair_and_transfers(pairs=pairs)
+        self.aliquot_pair_by_transfer = self._map_pair_and_transfers(
+            pairs=pairs)
         self.robot_deck_positioner = RobotDeckPositioner(
-            robot_name, self.transfers, container.size)
+            robot_name, self._transfers, container.size)
 
         self.calculate_transfer_volumes()
-        self.split_up_high_volume_rows()
         self.do_positioning()
-        self.sort_transfers()
-        self.grouped_transfers = list(self._grouped_transfers())
-
-    def _grouped_transfers(self):
-        """
-        Sometimes a sample transfer from source A to destination B is
-        split up on several rows, due to the max pipetting volume of 50 ul.
-        :return: An iterable group of transfers for a common destination well.
-        """
-        for key, transfer_group in groupby(
-                self.transfers, key=lambda t: "{}{}".format(
-                    t.target_container, t.target_well.position)):
-            yield list(transfer_group)
+        self.split_row_transfers = self.split_up_high_volume_rows(
+            self.sort_transfers(self._transfers))
+        self.unsplit_transfers = self.sort_transfers(self._transfers)
 
     def _filtered_transfers(self, all_transfers, include_blanks):
         if include_blanks:
@@ -266,22 +262,31 @@ class DilutionScheme(object):
         return transfers
 
     def _map_pair_and_transfers(self, pairs):
+        """
+        :param pairs: input artifact --- output artifact pair
+        :return: A function returning an artifact pair, given a transfer object
+        """
         pair_dict = {id(pair): pair for pair in pairs}
-        return {transfer: pair_dict[transfer.pair_id] for transfer in self.transfers}
+
+        def pair_by_transfer(transfer):
+            by_transfer_dict = {transfer.identifier: pair_dict[
+                transfer.pair_id] for transfer in self._transfers}
+            return by_transfer_dict[transfer.identifier]
+        return pair_by_transfer
 
     def calculate_transfer_volumes(self):
         # Handle volumes etc.
         self.volume_calc_strategy.calculate_transfer_volumes(
-            transfers=self.transfers, scale_up_low_volumes=self.scale_up_low_volumes)
+            transfers=self._transfers, scale_up_low_volumes=self.scale_up_low_volumes)
 
-    def split_up_high_volume_rows(self):
+    def split_up_high_volume_rows(self, transfers):
         """
         Split up a transfer between source well x and target well y into
         several rows, if sample volume or buffer volume exceeds 50 ul
         :return:
         """
-        added_transfers = []
-        for transfer in self.transfers:
+        split_row_transfers = []
+        for transfer in transfers:
             calculation_volume = max(
                 self._get_volume(transfer.sample_volume), self._get_volume(transfer.buffer_volume))
             (n, residual) = divmod(calculation_volume, PIPETTING_MAX_VOLUME)
@@ -291,24 +296,25 @@ class DilutionScheme(object):
                 total_rows = int(n)
 
             copies = self._create_copies(transfer, total_rows)
-            added_transfers += copies
+            split_row_transfers += copies
             self._split_up_volumes(
-                [transfer] + copies, transfer.sample_volume, transfer.buffer_volume)
+                copies, transfer.sample_volume, transfer.buffer_volume)
 
-        self.transfers += added_transfers
+        return split_row_transfers
 
     @staticmethod
     def _create_copies(transfer, total_rows):
         """
-        Create copies of transfer, if duplication_number > 1,
-        that will cause extra rows in the driver file.
+        Create copies of transfer
+        that will cause extra rows in the driver file if
+        pipetting volume exceeds 50 ul.
         Initiate both buffer volume and sample volume to zero
         :param transfer: The transfer to be copied
         :param total_rows: The total number of rows needed for a
         transfer between source well x and target well y
         :return:
         """
-        copies = []
+        copies = [copy.copy(transfer)]
         for i in xrange(0, total_rows - 1):
             t = copy.copy(transfer)
             t.buffer_volume = 0
@@ -343,22 +349,21 @@ class DilutionScheme(object):
                 t.sample_volume = float(
                     original_sample_volume / number_rows)
 
-    def sort_transfers(self):
+    def sort_transfers(self, transfers):
         def pipetting_volume(transfer):
             return self._get_volume(transfer.buffer_volume) + self._get_volume(transfer.sample_volume)
 
         def max_added_pip_volume():
             volumes = map(lambda t: (self._get_volume(t.buffer_volume),
-                                     self._get_volume(t.sample_volume)), self.transfers)
+                                     self._get_volume(t.sample_volume)), self._transfers)
             return max(map(lambda (buffer_vol, sample_vol): buffer_vol + sample_vol, volumes))
 
         # Sort on source position, and in case of splitted rows, pipetting
         # volumes. Let max pipetting volumes be shown first
         max_vol = max_added_pip_volume()
-        self.transfers = sorted(self.transfers,
-                                key=lambda t:
-                                self.robot_deck_positioner.find_sort_number(t) +
-                                (max_vol - pipetting_volume(t)) / (max_vol + 1.0))
+        return sorted(
+            transfers, key=lambda t: self.robot_deck_positioner.find_sort_number(t) +
+            (max_vol - pipetting_volume(t)) / (max_vol + 1.0))
 
     @staticmethod
     def _get_volume(volume):
@@ -372,7 +377,7 @@ class DilutionScheme(object):
 
     def do_positioning(self):
         # Handle positioning
-        for transfer in self.transfers:
+        for transfer in self._transfers:
             transfer.source_well_index = self.robot_deck_positioner.indexer(
                 transfer.source_well)
             transfer.source_plate_pos = self.robot_deck_positioner. \
