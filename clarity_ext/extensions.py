@@ -3,8 +3,6 @@ import os
 import sys
 import codecs
 import shutil
-from clarity_ext.driverfile import DriverFileService
-from clarity_ext.driverfile import OSService
 from context import ExtensionContext
 import clarity_ext.utils as utils
 from abc import ABCMeta, abstractmethod
@@ -248,14 +246,13 @@ class ExtensionService(object):
         old_dir = os.getcwd()
         os.chdir(path)
         self.logger.info("Executing at {}".format(path))
-        context = ExtensionContext.create(pid, test_mode=test_mode)
-        context.disable_commits = disable_context_commit
+        context = ExtensionContext.create(pid, test_mode=test_mode, upload_files=upload_files,
+                                          disable_commits=disable_context_commit,
+                                          uploaded_to_stdout=artifacts_to_stdout)
         instance = extension(context)
-        os_service = OSService()
         if issubclass(extension, DriverFileExtension):
-            file_svc = DriverFileService.create_file_service(
-                instance, instance.shared_file(), self.logger, os_service)
-            file_svc.execute(commit=upload_files, artifacts_to_stdout=artifacts_to_stdout)
+            context.upload_file_service.upload(instance.shared_file(), instance.filename(),
+                                               instance.content(), newline=instance.newline())
         elif issubclass(extension, GeneralExtension):
             instance.execute()
         else:

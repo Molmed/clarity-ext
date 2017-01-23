@@ -27,11 +27,4 @@ class TestContext(unittest.TestCase):
         self.assertRaises(ValueError, output_should_raise)
 
     def _mock_context(self):
-        session = MagicMock()
-        artifact_svc = helpers.mock_two_containers_artifact_service()
-        file_svc = MagicMock()
-        current_user = MagicMock()
-        step_logger_svc = MagicMock()
-        clarity_svc = MagicMock()
-        return ExtensionContext(session, artifact_svc, file_svc, current_user, step_logger_svc, None,
-                                clarity_svc, dilution_service=MagicMock())
+        return helpers.mock_context(artifact_service=helpers.mock_two_containers_artifact_service())

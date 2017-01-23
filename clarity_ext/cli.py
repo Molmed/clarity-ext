@@ -110,6 +110,9 @@ def extension(module, mode, args, cache):
         else:
             raise NotImplementedError("Mode '{}' is not implemented".format(mode))
     except Exception as ex:
+        if mode == "test":
+            # Just re-raise when testing - to keep the stacktrace
+            raise
         logger.exception("Exception while running extension")
         msg = "There was an exception while running the extension: '{}'. ".format(ex.message) + \
               "Refer to the file 'Step log' if available."

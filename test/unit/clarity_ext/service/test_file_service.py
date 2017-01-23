@@ -1,58 +1,27 @@
 import unittest
 from mock import MagicMock
-from clarity_ext.driverfile import DriverFileService, ResponseFileService
 from clarity_ext.domain.artifact import Artifact
-import logging
 import os
+from clarity_ext.service.file_service import UploadFileService
 
 
-class TestGeneralFileService(unittest.TestCase):
+class TestUploadFileService(unittest.TestCase):
 
     def test_run_driver_file_service(self):
-        shared_files = [fake_artifact("art1", "file1.txt"), fake_artifact("art2", "file2.txt")]
-        context = fake_context(step_id="step1", shared_files=shared_files, response=[])
-        extension = fake_extension("file1.txt", context)
+        artifact_service = MagicMock()
+        shared_files = [fake_artifact(
+            "art1", "Handle Name 1"), fake_artifact("art2", "Handle Name 2")]
+        artifact_service.shared_files = MagicMock(return_value=shared_files)
         os_service = MagicMock()
-        logger = logging.getLogger(__name__)
-        file_svc = DriverFileService.create_file_service(extension, extension.shared_file(), logger, os_service)
-        file_svc.execute()
-        os_service.copy_file.assert_called_with(".{sep}file1.txt".format(sep=os.sep),
-                                                ".{sep}uploaded{sep}art1_file1.txt".format(sep=os.sep))
-
-    def test_run_response_file_service(self):
-        context = fake_context(step_id="step1", shared_files=None, response=[])
-        extension = fake_extension("response.txt", context)
-        os_service = MagicMock()
-        logger = logging.getLogger(__name__)
-        file_svc = ResponseFileService.create_file_service(extension, logger, os_service)
-        file_svc.execute()
-        os_service.copy_file.assert_called_with(".{sep}response.txt".format(sep=os.sep),
-                                                ".{sep}uploaded{sep}step1_response.txt".format(sep=os.sep))
+        upload_file_service = UploadFileService(
+            os_service=os_service, artifact_service=artifact_service)
+        upload_file_service.upload("Handle Name 2", "file2.txt", "content")
+        os_service.attach_file_for_epp.assert_called_with(".{sep}file2.txt".format(sep=os.sep),
+                                                          shared_files[1])
 
 
-def fake_artifact(id, name):
+def fake_artifact(artifact_id, name):
     artifact = Artifact()
     artifact.name = name
-    artifact.id = id
+    artifact.id = artifact_id
     return artifact
-
-
-def fake_context(step_id, shared_files, response):
-    context = MagicMock()
-    session = MagicMock()
-    session.current_step_id = step_id
-    context.shared_files = shared_files
-    context.response = response
-    context.session = session
-    return context
-
-
-def fake_extension(file_name=None, context=None):
-    extension = MagicMock()
-    extension.context = context
-    extension.filename.return_value = file_name
-    extension.shared_file.return_value = file_name
-    extension.newline.return_value = '\n'
-    extension.execute.return_value = []
-    extension.content.return_value = "content"
-    return extension

@@ -253,3 +253,12 @@ def print_list(object_list, caption):
     for o in object_list:
         print("{}".format(o))
     print("-------------------------------------------\n")
+
+
+def mock_context(**kwargs):
+    """Creates a mock with the service provided as keyword arguments, filling the rest with MagicMock"""
+
+    for arg in ["session", "artifact_service", "file_service", "current_user", "step_logger_service",
+                "step_repo", "clarity_service", "dilution_service", "upload_file_service"]:
+        kwargs.setdefault(arg, MagicMock())
+    return ExtensionContext(**kwargs)

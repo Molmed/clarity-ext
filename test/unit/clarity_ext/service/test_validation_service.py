@@ -5,7 +5,7 @@ import logging
 from clarity_ext.extensions import ValidationService
 from clarity_ext.domain.validation import ValidationException
 from clarity_ext.domain.validation import ValidationType
-from clarity_ext.context import ExtensionContext
+from test.unit.clarity_ext.helpers import mock_context
 
 
 class TestValidationService(unittest.TestCase):
@@ -13,18 +13,8 @@ class TestValidationService(unittest.TestCase):
     def setUp(self):
         self.logger = logging.getLogger(self.__class__.__module__)
 
-    def instantiate_context(self):
-        session = MagicMock()
-        artifact_svc = MagicMock()
-        file_svc = MagicMock()
-        current_user = MagicMock()
-        step_logger_svc = MagicMock()
-        clarity_svc = MagicMock()
-        return ExtensionContext(session, artifact_svc, file_svc, current_user,
-                                step_logger_svc, None, clarity_svc, dilution_service=MagicMock())
-
     def test_validation_logging(self):
-        context = self.instantiate_context()
+        context = mock_context()
         validation_service = ValidationService(
             context=context, logger=self.logger)
         step_logger_service = MagicMock()
