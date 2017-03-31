@@ -155,7 +155,8 @@ class ArtifactService:
         if not self._parent_input_artifacts_by_sample_id:
             parent_input_artifacts = list(self.parent_input_artifacts())
             self._parent_input_artifacts_by_sample_id = {
-                utils.single(current.samples).id: current for current in parent_input_artifacts}
+                utils.single(current.samples).id: current for current in parent_input_artifacts
+                if len(current.samples) == 1}
         return self._parent_input_artifacts_by_sample_id[sample.id]
 
     def all_output_result_files(self):
