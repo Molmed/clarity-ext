@@ -749,7 +749,8 @@ class TransferBatch(object):
     def container_mappings(self):
         ret = set()
         for transfer in self.transfers:
-            ret.add((transfer.source_slot, transfer.target_slot))
+            if not transfer.source_location.artifact.is_control:
+                ret.add((transfer.source_slot, transfer.target_slot))
         ret = list(sorted(ret, key=lambda t: t[0].index))
         return ret
 
