@@ -193,7 +193,7 @@ class DilutionSession(object):
         for key in transfer_by_batch:
             depth = 0 if key == "default" else 1  # TODO Used?
             is_temporary = key != "default"  # and this?
-            transfer_batches.append(TransferBatch(transfer_by_batch[key], robot_settings, depth, is_temporary, key))
+            transfer_batches.append(TransferBatch(transfer_by_batch[key], depth, is_temporary, key))
 
         # Run transfer_batch handlers, these might for example validate an entire batch
         for batch_handler in batch_handlers:
@@ -397,21 +397,9 @@ class SingleTransfer(object):
         # A site-specific command to send to the robot.
         self.custom_command = None
 
-    def _container_slot(self, is_source):
-        if self.transfer_batch is None or self.source_location is None or self.target_location is None:
-            return None
-        container = self.source_location.container if is_source else self.target_location.container
-        return self.transfer_batch.get_container_slot(container)
-
-    @property
-    def source_slot(self):
-        """Provides the source slot of the transfer if it has been positioned yet"""
-        return self._container_slot(True)
-
-    @property
-    def target_slot(self):
-        """Provides the target slot of the transfer if it has been positioned yet"""
-        return self._container_slot(False)
+        # The source and target slot are slots on the robot in which the containers are put:
+        self.source_slot = None
+        self.target_slot = None
 
     @property
     def pipette_total_volume(self):
@@ -612,66 +600,24 @@ class TransferBatch(object):
     Encapsulates a list of SingleTransfer objects. Used to generate robot driver files.
     """
 
-    def __init__(self, transfers, robot_settings, depth=0, is_temporary=False, name=None):
+    def __init__(self, transfers, depth=0, is_temporary=False, name=None):
+        self._container_to_container_slot = dict()
         self.depth = depth
         self.is_temporary = is_temporary  # temp dilution, no plate will actually be saved.
         self.validation_results = list()
-        self._set_transfers(transfers, robot_settings)
+        self._set_transfers(transfers)
         self.name = name
         self._transfers_by_output_dict = None
         # Set to True if the transfer batch was split
         self.split = False
 
-    def get_container_slot(self, container):
-        return self.container_to_container_slot[container]
-
-    def _set_transfers(self, transfers, robot_settings):
+    def _set_transfers(self, transfers):
         self._transfers_by_output_dict = None
         self._transfers = transfers
-        self._sort_and_name_containers(robot_settings)
         for transfer in transfers:
             transfer.transfer_batch = self
         for validation_result in transfer.validation_results:
             self.validation_results.append(validation_result)
-
-    def _sort_and_name_containers(self, robot_settings):
-        """Updates the list of containers and assigns temporary names and positions to them"""
-
-        def sort_key(c):
-            return not c.is_temporary, c.id
-
-        def contains_only_control(container):
-            return all(well.artifact.is_control for well in container.occupied)
-
-        # We need to ensure that the containers that contain only a control always get index=0
-        # NOTE: This is very site-specific so it would be better to solve it with handlers
-        all_source_containers = set(transfer.source_location.container for transfer in self._transfers)
-        source_containers_only_control = set(container for container in all_source_containers
-                                             if contains_only_control(container))
-
-        self.container_to_container_slot = dict()
-        for container in source_containers_only_control:
-            self.container_to_container_slot[container] = self._container_to_slot(robot_settings, container, 0, True)
-
-        source_containers = all_source_containers - source_containers_only_control
-        target_containers = set(transfer.target_location.container for transfer in self._transfers)
-        assert len(source_containers.intersection(target_containers)) == 0
-
-        source_containers = sorted(source_containers, key=sort_key)
-        target_containers = sorted(target_containers, key=sort_key)
-
-        for ix, container in enumerate(source_containers):
-            self.container_to_container_slot[container] = \
-                self._container_to_slot(robot_settings, container, ix, True)
-        for ix, container in enumerate(target_containers):
-            self.container_to_container_slot[container] = \
-                self._container_to_slot(robot_settings, container, ix, False)
-
-    @staticmethod
-    def _container_to_slot(robot_settings, container, ix, is_source):
-        slot = ContainerSlot(container, ix, None, is_source)
-        slot.name = robot_settings.get_container_handle_name(slot)
-        return slot
 
     @property
     def transfers(self):
@@ -731,6 +677,9 @@ class TransferBatch(object):
         for transfer in self._transfers:
             report.append("{}".format(transfer))
         return "\n".join(report)
+
+    def __iter__(self):
+        return iter(self.transfers)
 
 
 class TransferBatchCollection(object):

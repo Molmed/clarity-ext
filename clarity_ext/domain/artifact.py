@@ -33,3 +33,6 @@ class ArtifactPair(object):
     def __repr__(self):
         return "(in={}, out={})".format(self.input_artifact, self.output_artifact)
 
+    def __iter__(self):
+        yield self.input_artifact
+        yield self.output_artifact
