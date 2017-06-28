@@ -19,6 +19,8 @@ from jinja2 import Template
 import time
 import random
 import logging.handlers
+import lxml.objectify
+from clarity_ext.service.validation_service import UsageError
 
 
 # Defines all classes that are expected to be extended. These are
@@ -488,6 +490,25 @@ class GeneralExtension(object):
         if time_tuple is None:
             time_tuple = self.localtime()
         return strftime(fmt, time_tuple)
+
+    @staticmethod
+    def parse(func, val):
+        """Parses the value using func, but adding extra information for the end user.
+
+        If this is an XML file, it will also add information on which line the error occurred."""
+        try:
+            return func(val)
+        except ValueError:
+            msg = "Not able to parse {} to a {}".format(repr(val), func.__name__)
+            if isinstance(val, lxml.objectify.StringElement):
+                msg = "{}: Error occurred at line {} in the xml file".format(msg, val.sourceline)
+            raise UsageError(msg)
+
+    def int(self, val):
+        self.parse(int, val)
+
+    def float(self, val):
+        self.parse(float, val)
 
 
 class DriverFileExtension(GeneralExtension):
