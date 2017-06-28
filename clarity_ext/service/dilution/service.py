@@ -394,6 +394,9 @@ class SingleTransfer(object):
 
         self.validation_results = ValidationResults()
 
+        # A site-specific command to send to the robot.
+        self.custom_command = None
+
     def _container_slot(self, is_source):
         if self.transfer_batch is None or self.source_location is None or self.target_location is None:
             return None
