@@ -286,7 +286,7 @@ class ExtensionService(object):
         if total_error_count > 0 or total_warning_count > 0:
             errors = self._generate_notifications(user_errors)
             warnings = self._generate_notifications(user_warnings)
-            end_user_notification = list()
+            end_user_notification = ["Errors: {}, Warnings: {}".format(total_error_count, total_warning_count)]
             # Log the error/warning, but also show it to the user
             if errors:
                 for error in errors:

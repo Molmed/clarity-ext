@@ -200,8 +200,11 @@ class DilutionSession(object):
             for batch in transfer_batches:
                 batch_handler.handle_batch(batch)
 
+        # Push all validation results over to the validation_service
         for batch in transfer_batches:
             self.validation_service.handle_validation(batch.validation_results)
+            for transfer in batch.transfers:
+                self.validation_service.handle_validation(transfer.validation_results)
 
         for ix, transfer_batch in enumerate(transfer_batches):
             # Evaluate CSVs:
