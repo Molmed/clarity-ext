@@ -40,7 +40,7 @@ class RoutingService(object):
         if not self.commit:
             self.logger.info("Running with commit off. The message was not posted.")
         else:
-            #response = self.session.api.post(route_uri, reroute_request)
+            response = self.session.api.post(route_uri, reroute_request)
             self.logger.info(response)
 
 
