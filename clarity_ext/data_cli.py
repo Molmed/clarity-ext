@@ -21,7 +21,7 @@ def main(level, to_file):
     if not to_file:
         logging.basicConfig(level=log_level)
     else:
-        logging.basicConfig(level=logging.DEBUG,
+        logging.basicConfig(level=log_level,
                             format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                             filename='adhoc.log',
                             filemode='a')
