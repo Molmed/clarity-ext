@@ -186,9 +186,8 @@ class UploadFileService(object):
                 "disable_commits is on, copying the file to {}".format(upload_path))
             if not self.os_service.exists(upload_path):
                 self.os_service.mkdir(upload_path)
-            fake_name = "{}_{}".format(
-                artifact.id, os.path.basename(instance_name))
-            new_file_path = os.path.join(upload_path, fake_name)
+            base_name = os.path.basename(instance_name)
+            new_file_path = os.path.join(upload_path, base_name)
             self.os_service.copy_file(local_path, new_file_path)
         else:
             self.logger.info("Uploading to the LIMS server")
@@ -337,7 +336,6 @@ class OSService(object):
     def attach_file_for_epp(self, local_file, artifact):
         # TODO: Remove epp from the name
         original_name = os.path.basename(local_file)
-        new_name = artifact.id + '_' + original_name
-        location = os.path.join(os.getcwd(), new_name)
+        location = os.path.join(os.getcwd(), original_name)
         shutil.copy(local_file, location)
         return location
