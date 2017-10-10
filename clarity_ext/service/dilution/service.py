@@ -534,17 +534,20 @@ class RobotSettings(object):
     def transfer_sort_key(transfer):
         """
         Sort the transfers based on:
-            - Regular should become before controls
             - source position (container.index)
             - well index (down first)
             - pipette volume (descending)
+            - target position (container.index)
+            - target well index (down first)
         """
         assert transfer.transfer_batch is not None
         assert transfer.source_slot is not None
         assert transfer.source_slot.index is not None
         return (transfer.source_slot.index,
                 transfer.source_location.index_down_first,
-                -transfer.pipette_total_volume)
+                -transfer.pipette_total_volume,
+                transfer.target_slot.index,
+                transfer.target_location.index_down_first)
 
     def __repr__(self):
         return "<RobotSettings {}>".format(self.name)
