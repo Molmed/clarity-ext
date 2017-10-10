@@ -163,7 +163,7 @@ class DilutionSession(object):
                 transfer_by_batch.setdefault(transfer.batch, list())
                 transfer_by_batch[transfer.batch].append(transfer)
 
-        transfer_batches = TransferBatchCollection()
+        transfer_batches = TransferBatchCollection(robot_settings.transfer_batch_sort_key)
         for key in transfer_by_batch:
             depth = 0 if key == "default" else 1  # TODO Used?
             is_temporary = key != "default"  # and this?
@@ -178,10 +178,12 @@ class DilutionSession(object):
         for batch in transfer_batches:
             self.validation_service.handle_validation(batch.validation_results)
 
+        include_step_prefix = len(transfer_batches) > 1
         for ix, transfer_batch in enumerate(transfer_batches):
             # Evaluate CSVs:
             csv = Csv(delim=robot_settings.delimiter, newline=robot_settings.newline)
-            csv.file_name = robot_settings.get_filename(transfer_batch, self.context, ix)
+            csv.file_name = \
+                robot_settings.get_filename(transfer_batch, self.context, ix, include_step_prefix)
             csv.set_header(robot_settings.header)
             sorted_transfers = sorted(transfer_batch.transfers, key=robot_settings.transfer_sort_key)
             for transfer in sorted_transfers:
@@ -676,15 +678,16 @@ class TransferBatchCollection(object):
     TransferBatch.
     """
 
-    def __init__(self, *args):
+    def __init__(self, sort_key, *args):
         self._batches = list()
+        self.sort_key = sort_key
         self._batches.extend(args)
 
     def append(self, obj):
         self._batches.append(obj)
 
     def __iter__(self):
-        return iter(self._batches)
+        return iter(sorted(self._batches, key=self.sort_key))
 
     def __len__(self):
         return len(self._batches)
