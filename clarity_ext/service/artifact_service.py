@@ -156,8 +156,15 @@ class ArtifactService:
             self._parent_input_artifacts_by_sample_id = dict()
             for parent_input_artifact in parent_input_artifacts:
                 for current_sample in parent_input_artifact.samples:
-                    assert current_sample.id not in self._parent_input_artifacts_by_sample_id
+                    if current_sample.id in self._parent_input_artifacts_by_sample_id:
+                        previously_mapped = self._parent_input_artifacts_by_sample_id[current_sample.id]
+                        if previously_mapped != parent_input_artifact:
+                            raise ValueError("Can't find parent input artifact for sample {}. "
+                                             "It maps to different parent analytes {}".format(sample.id,
+                                                 [parent_input_artifact, previously_mapped]))
                     self._parent_input_artifacts_by_sample_id[current_sample.id] = parent_input_artifact
+        if sample.id not in self._parent_input_artifacts_by_sample_id:
+            raise ValueError("Can't find a parent artifact for this sample: {}".format(sample.id))
         return self._parent_input_artifacts_by_sample_id[sample.id]
 
     def all_output_result_files(self):
