@@ -49,5 +49,5 @@ class TestArtifactService(unittest.TestCase):
             all_samples, lambda sample: sample.id))
         self.assertTrue(len(unique_samples) >= 2)
         for sample in unique_samples:
-            parent = context.artifact_service.get_parent_input_artifact(sample)
+            parent = utils.single(context.artifact_service.get_parent_input_artifact(sample))
             self.assertEqual(sample.name, parent.name)

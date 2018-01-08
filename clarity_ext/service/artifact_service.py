@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from clarity_ext.domain import *
 from clarity_ext.domain.shared_result_file import SharedResultFile
 from clarity_ext.repository import StepRepository
@@ -146,18 +147,18 @@ class ArtifactService:
 
     def get_parent_input_artifact(self, sample):
         """
-        Given a sample in some artifact, returns parent artifact for that sample.
+        Given a sample in some artifact, returns a list of parent artifacts for that sample. This should usually
+        be just one artifact, but that depends on e.g. if the sample has been requeued.
 
         Performance note:
         Starts by fetching all input artifacts of all parent processes (to save time if there are further calls)
         """
         if not self._parent_input_artifacts_by_sample_id:
             parent_input_artifacts = list(self.parent_input_artifacts())
-            self._parent_input_artifacts_by_sample_id = dict()
+            self._parent_input_artifacts_by_sample_id = defaultdict(list)
             for parent_input_artifact in parent_input_artifacts:
                 for current_sample in parent_input_artifact.samples:
-                    assert current_sample.id not in self._parent_input_artifacts_by_sample_id
-                    self._parent_input_artifacts_by_sample_id[current_sample.id] = parent_input_artifact
+                    self._parent_input_artifacts_by_sample_id[current_sample.id].append(parent_input_artifact)
         return self._parent_input_artifacts_by_sample_id[sample.id]
 
     def all_output_result_files(self):
