@@ -70,10 +70,9 @@ class ClarityService(object):
                                                                             api_resource.name, domain_object.name))
                 api_resource.name = domain_object.name
                 # Update UDFs. TODO: Clean this up and do it the same way for all resources
-                for udf_name in api_resource.udf:
-                    if api_resource.udf[udf_name] != domain_object.udf_map[udf_name].value:
-                        api_resource.udf[udf_name] = domain_object.udf_map[udf_name].value
-
+                for udf in domain_object.udf_map.values:
+                    if udf.key not in api_resource.udf or api_resource.udf[udf.key] != udf.value:
+                        api_resource.udf[udf.key] = udf.value
                 if not ignore_commit:
                     self.clarity_repository.update(api_resource)
         elif isinstance(domain_object, Sample):
