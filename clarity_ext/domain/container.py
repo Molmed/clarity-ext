@@ -1,6 +1,8 @@
 from collections import namedtuple
 from clarity_ext.utils import lazyprop
 from clarity_ext.domain.common import DomainObjectMixin
+from clarity_ext.domain.udf import DomainObjectWithUdfMixin
+from clarity_ext.domain.udf import UdfMapping
 
 
 class Well(DomainObjectMixin):
@@ -95,7 +97,7 @@ class PlateSize(namedtuple("PlateSize", ["height", "width"])):
     pass
 
 
-class Container(DomainObjectMixin):
+class Container(DomainObjectWithUdfMixin):
     """Encapsulates a Container"""
 
     DOWN_FIRST = 1
@@ -104,7 +106,7 @@ class Container(DomainObjectMixin):
     CONTAINER_TYPE_96_WELLS_PLATE = "96 well plate"
 
     def __init__(self, mapping=None, size=None, container_type=None,
-                 container_id=None, name=None, is_source=None, append_order=DOWN_FIRST, sort_weight=0):
+                 container_id=None, name=None, is_source=None, append_order=DOWN_FIRST, sort_weight=0, udf_map=None):
         """
         :param mapping: A dictionary-like object containing mapping from well
         position to content. It can be non-complete.
@@ -112,6 +114,7 @@ class Container(DomainObjectMixin):
         :param container_type: The type of the container (string)
         :return:
         """
+        self.udf_map = udf_map
         self.mapping = mapping
         # TODO: using both container_type and container_type_name is temporary
         self.container_type = container_type
@@ -207,10 +210,12 @@ class Container(DomainObjectMixin):
         size = PlateSize(width=resource.type.x_dimension[
                          "size"], height=resource.type.y_dimension["size"])
 
-        ret = Container(size=size, container_type=resource.type.name, is_source=is_source)
+        udf_map = UdfMapping(resource.udf)
+        ret = Container(size=size, container_type=resource.type.name, is_source=is_source, udf_map=udf_map)
         ret.id = resource.id
         ret.name = resource.name
         ret.size = size
+
         for artifact in api_artifacts:
             ret.set_well_update_artifact(artifact.location[1], artifact)
         ret.api_resource = resource
