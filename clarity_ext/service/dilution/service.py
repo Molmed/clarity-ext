@@ -422,8 +422,9 @@ class SingleTransfer(object):
 
     @property
     def update_info(self):
+        end_volume = self.pipette_sample_volume + self.pipette_buffer_volume
         return UpdateInfo(target_conc=self.target_conc if self.should_update_target_conc else None,
-                          target_vol=self.target_vol if self.should_update_target_vol else None,
+                          target_vol=end_volume if self.should_update_target_vol else None,
                           source_vol_delta=self.source_vol_delta if self.should_update_source_vol else None)
 
     @property
