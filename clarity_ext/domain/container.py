@@ -1,9 +1,11 @@
+import logging
 from collections import namedtuple
 from clarity_ext.utils import lazyprop
 from clarity_ext.domain.common import DomainObjectMixin
 from clarity_ext.domain.udf import DomainObjectWithUdfMixin
 from clarity_ext.domain.udf import UdfMapping
 
+logger = logging.getLogger(__name__)
 
 class Well(DomainObjectMixin):
     """

@@ -1,3 +1,4 @@
+import logging
 from clarity_ext.service.dilution.service import DilutionService
 from clarity_ext import UnitConversion
 from clarity_ext.repository import ClarityRepository, FileRepository
@@ -11,6 +12,8 @@ from clarity_ext.service.file_service import OSService
 from clarity_ext.mappers.clarity_mapper import ClarityMapper
 from clarity_ext.domain.validation import ValidationException
 from clarity_ext.domain.validation import ValidationType
+
+logger = logging.getLogger(__name__)
 
 
 class ExtensionContext(object):
@@ -264,3 +267,33 @@ class ExtensionContext(object):
     def current_process_type(self):
         # TODO: Hang this on the process object
         return self.step_repo.get_process_type()
+
+    def copy_container(self, container, name, auto_place=False):
+        """
+        Creates a copy of the container in Clarity.
+
+        If auto_place is set to True, all samples in the container are copied to the new plate
+
+        Note that unlike many context methods, the results are not queued up or require a commit.
+        """
+
+        if not self.commit:
+            logger.info("Not copying container as commit is set to False")
+            return
+
+        logger.info("Creating a copy of {}, auto_place={}".format(container.name, auto_place))
+
+        # TODO: Move this code to services (surprised to see that the domain objects don't
+        # have access to the services). But in order to get this out quick, this will suffice
+        from genologics.entities import Container
+        from genologics.config import BASEURI
+        new_container = Container._create(
+                container.api_resource.lims,
+                name=name,
+                type=container.api_resource.type)
+        new_container._uri = BASEURI + "/api/v2/containers"
+        new_container_id = new_container.post()
+        logger.info("Created a new container with limsid={}".format(new_container_id))
+
+        if auto_place:
+            pass
