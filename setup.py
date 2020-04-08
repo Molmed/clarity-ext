@@ -4,10 +4,9 @@ Main entry point for Clarity extensions in the SNP&SEQ installation
 from setuptools import find_packages, setup
 from clarity_ext import VERSION
 
-# Add that to the dev reqs file for now, since it's not needed when running
 dependencies = ['click', 'genologics', 'requests-cache', 'pyyaml', 'nose', 'PyPDF2',
                 'lxml', 'coverage', 'pep8radius', 'mock', 'jinja2', 'python-levenshtein',
-                'fuzzywuzzy']
+                'fuzzywuzzy', 'pandas', 'xlrd']
 
 setup(
     name='clarity-ext',
