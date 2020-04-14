@@ -91,30 +91,33 @@ class ClarityService(object):
         project_resource = utils.single(self.session.api.get_projects(name=project_name))
         return ProjectClarityMapper.create_object(project_resource)
 
-    def create_container(self, container, with_samples=False, assign_to=None):
+    def create_container(self, in_mem_container, with_samples=False, assign_to=None):
         """
         Creates the container and all samples in it. 
 
         Requires a container and samples that do not have an ID. The samples are interpreted as
         original samples, not analytes.
         """
-        if container.id:
+        if in_mem_container.id:
             raise AssertionError("This container already has an ID: {}".format(container))
         container_type = utils.single(
-                self.session.api.get_containertypes(name=container.container_type))
+                self.session.api.get_containertypes(name=in_mem_container.container_type))
         
         container_res = entities.Container.create(
-                self.session.api, name=container.name, type=container_type)
-        container.id = container_res.id
+                self.session.api, name=in_mem_container.name, type=container_type)
+        in_mem_container.id = container_res.id
 
         if not with_samples:
-            return container
+            return in_mem_container
 
         created_artifacts = list()
 
         # TODO: Do this in a batch call
-        for well in container.occupied:
+        for well in in_mem_container.occupied:
             sample = well.artifact
+            if sample.id:
+                raise AssertionError("This sample already has an ID: {}".format(sample))
+
             sample_res = entities.Sample.create(
                     self.session.api,
                     container=container_res,
@@ -131,5 +134,5 @@ class ClarityService(object):
             workflow = utils.single(self.session.api.get_workflows(name=assign_to))
             self.session.api.route_artifacts(created_artifacts, workflow_uri=workflow.uri)
 
-        return container
+        return in_mem_container
 

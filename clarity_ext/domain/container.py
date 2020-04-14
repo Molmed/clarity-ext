@@ -73,7 +73,7 @@ class ContainerPosition(namedtuple("ContainerPosition", ["row", "col"])):
                 row, col = repr.split(":")
             else:
                 # If we have a string that doesn't contain ":", it must be on the format
-                # <A-Z>:<integer>
+                # <A-Z><integer>
                 row = repr[0]
                 if not row.isalpha():
                     raise AssertionError("Expecting first character to be A-Z {}".format(repr))
