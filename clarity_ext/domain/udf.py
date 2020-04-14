@@ -11,6 +11,8 @@ class DomainObjectWithUdfMixin(DomainObjectMixin):
     def __init__(self, api_resource=None, id=None, udf_map=None):
         # NOTE: The udf_map must be the first object set,
         # since it's used in __getattr__ and __setattr__
+        if udf_map is None:
+            udf_map = UdfMapping()
         self.udf_map = udf_map
         self.api_resource = api_resource
         self.id = id
@@ -141,6 +143,13 @@ class UdfMapping(object):
         # Post: The raw_map will contain a new key that corresponds to the original
         # UDF. It will also contain a mapping from a python name to that exact same
         # value, so fetching by either name will lead to the same results.
+
+    def to_dict(self):
+        # Returns a dict of the key/values where the key is the original Clarity key (not the
+        # python name):
+        return {
+            udf_info.key: udf_info.value for udf_info in self.values
+        }
 
     def __getitem__(self, key):
         return self.unwrap(key)

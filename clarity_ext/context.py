@@ -1,3 +1,4 @@
+from datetime import datetime
 from clarity_ext.service.dilution.service import DilutionService
 from clarity_ext import UnitConversion
 from clarity_ext.repository import ClarityRepository, FileRepository
@@ -63,6 +64,7 @@ class ExtensionContext(object):
         self.disable_commits = disable_commits
         self._calls_to_commit = 0
         self.validation_results = list()
+        self.start = datetime.now()
 
     @staticmethod
     def create(step_id, test_mode=False, uploaded_to_stdout=False, disable_commits=False):
@@ -84,7 +86,7 @@ class ExtensionContext(object):
         step_logger_service = StepLoggerService("Step log", file_service, write_to_stdout=test_mode)
         validation_service = ValidationService(step_logger_service)
         clarity_service = ClarityService(
-            ClarityRepository(), step_repo, clarity_mapper)
+            ClarityRepository(), step_repo, clarity_mapper, session=session)
         process_service = ProcessService()
         dilution_service = DilutionService(validation_service)
         return ExtensionContext(session, artifact_service, file_service, current_user,

@@ -1,7 +1,7 @@
 from clarity_ext.domain.udf import UdfMapping
 from clarity_ext.domain.aliquot import Project, Sample
 from clarity_ext.domain import ResultFile
-from clarity_ext.domain import Analyte
+from clarity_ext.domain import Analyte, Project
 from clarity_ext import utils
 from clarity_ext.domain.container import ContainerPosition
 
@@ -172,4 +172,17 @@ class ClarityMapper(object):
         ret = ResultFile(api_resource=resource, is_input=is_input,
                          id=resource.id, samples=samples, name=resource.name, well=well,
                          udf_map=udf_map)
+        return ret
+
+
+class ProjectClarityMapper(object):
+    @staticmethod
+    def create_resource(obj):
+        raise NotImplementedError()
+
+    @staticmethod
+    def create_object(resource):
+        ret = Project(resource.name)
+        ret.api_resource = resource
+        ret.id = resource.id
         return ret
