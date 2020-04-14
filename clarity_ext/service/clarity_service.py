@@ -1,5 +1,8 @@
 import logging
-from clarity_ext.domain import Container, Artifact, Sample
+from genologics import entities
+from clarity_ext.domain import Container, Artifact, Sample, Project
+from clarity_ext import utils
+from clarity_ext.mappers.clarity_mapper import ProjectClarityMapper
 
 
 class ClarityService(object):
@@ -9,11 +12,12 @@ class ClarityService(object):
     Note that artifacts (e.g. Analytes) are still handled in the ArtifactService
     """
 
-    def __init__(self, clarity_repo, step_repo, clarity_mapper, logger=None):
+    def __init__(self, clarity_repo, step_repo, clarity_mapper, logger=None, session=None):
         self.logger = logger or logging.getLogger(__name__)
         self.clarity_repository = clarity_repo
         self.step_repository = step_repo
         self.clarity_mapper = clarity_mapper
+        self.session = session
 
     def update(self, domain_objects, ignore_commit=False):
         """Updates the domain object"""
@@ -82,3 +86,50 @@ class ClarityService(object):
                 self.clarity_repository.update(api_resource)
         else:
             raise NotImplementedError("The type '{}' isn't implemented".format(type(domain_object)))
+
+    def get_project_by_name(self, project_name):
+        project_resource = utils.single(self.session.api.get_projects(name=project_name))
+        return ProjectClarityMapper.create_object(project_resource)
+
+    def create_container(self, container, with_samples=False, assign_to=None):
+        """
+        Creates the container and all samples in it. 
+
+        Requires a container and samples that do not have an ID. The samples are interpreted as
+        original samples, not analytes.
+        """
+        if container.id:
+            raise AssertionError("This container already has an ID: {}".format(container))
+        container_type = utils.single(
+                self.session.api.get_containertypes(name=container.container_type))
+        
+        container_res = entities.Container.create(
+                self.session.api, name=container.name, type=container_type)
+        container.id = container_res.id
+
+        if not with_samples:
+            return container
+
+        created_artifacts = list()
+
+        # TODO: Do this in a batch call
+        for well in container.occupied:
+            sample = well.artifact
+            sample_res = entities.Sample.create(
+                    self.session.api,
+                    container=container_res,
+                    position=repr(well.position),
+                    name=sample.name,
+                    project=sample.project.api_resource,
+                    udfs=sample.udf_map.to_dict())
+
+            artifact = entities.Artifact(self.session.api, id=sample_res.id + "PA1")
+            created_artifacts.append(artifact)
+
+        if assign_to:
+            # Assign all the samples directly to a workflow
+            workflow = utils.single(self.session.api.get_workflows(name=assign_to))
+            self.session.api.route_artifacts(created_artifacts, workflow_uri=workflow.uri)
+
+        return container
+

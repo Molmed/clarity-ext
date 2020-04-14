@@ -62,13 +62,22 @@ class ContainerPosition(namedtuple("ContainerPosition", ["row", "col"])):
         Creates a ContainerPosition from different representations. Supported formats:
             "<row as A-Z>:<col as int>"
             "<row as int>:<col as int>"
+            "<row as A-Z><col as int>"
             (<row>, <col>) where both are integers
-            (<row>, <col>) where column is a string (e.g. A)
+            (<row>, <col>) where row is a string (e.g. A)
         """
         if not repr:
             return None
         if isinstance(repr, basestring):
-            row, col = repr.split(":")
+            if ":" in repr:
+                row, col = repr.split(":")
+            else:
+                # If we have a string that doesn't contain ":", it must be on the format
+                # <A-Z>:<integer>
+                row = repr[0]
+                if not row.isalpha():
+                    raise AssertionError("Expecting first character to be A-Z {}".format(repr))
+                col = repr[1:]
             if row.isalpha():
                 row = ord(row.upper()) - 64
             else:
