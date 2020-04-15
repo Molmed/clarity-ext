@@ -86,7 +86,7 @@ class FileService:
                              modify_attached=modify_attached,
                              filename=filename)
 
-    def queue(self, downloaded_path, artifact, file_prefix):
+    def queue(self, downloaded_path, artifact, file_prefix=FILE_PREFIX_NONE):
         file_name = os.path.basename(downloaded_path)
         self.artifactid_by_filename[file_name] = artifact.id
         if file_prefix == FileService.FILE_PREFIX_ARTIFACT_ID and not file_name.startswith(artifact.id):
@@ -187,9 +187,24 @@ class FileService:
 
     def _upload_single(self, artifact, file_handle, instance_name, content, file_prefix):
         """Queues the file for update. Call commit to send to the server."""
+
         local_path = self.save_locally(content, instance_name)
         self.logger.info("Queuing file '{}' for upload to the server, file handle '{}'".format(local_path, file_handle))
         self.queue(local_path, artifact, file_prefix)
+
+    def pre_queue(self, filename, file_handle):
+        """
+        This is a temporary solution to solve the problem when one wants to get the full path
+        they need to write to.
+
+        Returns the full path to the file you're going to write and the artifact to which it should
+        be uploaded. These can be used as arguments to `queue` to queue a file for upload. 
+        """
+        artifact = utils.single(
+            sorted([shared_file for shared_file in self.artifact_service.shared_files()
+                    if shared_file.name == file_handle], key=lambda x: x.id))
+        full_path = os.path.join(self.temp_path, filename)
+        return full_path, artifact
 
     def close_local_shared_files(self):
         for f in self._local_shared_files:
