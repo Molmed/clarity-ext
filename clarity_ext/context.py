@@ -154,6 +154,13 @@ class ExtensionContext(object):
         return self.artifact_service.all_analyte_pairs()
 
     @lazyprop
+    def containers(self):
+        """
+        Returns a tuple of (input, output) containers
+        """
+        return self.artifact_service.all_containers()
+
+    @lazyprop
     def output_containers(self):
         """
         Returns all output containers, with respective items
