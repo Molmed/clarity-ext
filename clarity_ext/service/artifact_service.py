@@ -80,6 +80,19 @@ class ArtifactService:
         """Returns a unique list of output analytes"""
         return filter(lambda x: isinstance(x, Analyte), self.all_output_artifacts())
 
+    def all_containers(self):
+        """
+        Returns the mapping of all input containers to output containers
+        """
+        containers = dict()
+        for in_artifact, out_artifact in self.all_artifacts():
+            if isinstance(in_artifact, Aliquot) and isinstance(out_artifact, Aliquot):
+                if in_artifact.container and out_artifact.container:
+                    key = in_artifact.container.id + "|" + out_artifact.container.id
+                    if key not in containers:
+                        containers[key] = (in_artifact.container, out_artifact.container)
+        return containers.values()
+
     def all_output_containers(self):
         containers_non_unique = (artifact.container
                                  for artifact in self.all_output_artifacts()
