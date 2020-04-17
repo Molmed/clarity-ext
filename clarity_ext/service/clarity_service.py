@@ -1,6 +1,6 @@
 import logging
 from genologics import entities
-from clarity_ext.domain import Container, Artifact, Sample, Project
+from clarity_ext.domain import Container, Artifact, Sample, Project, Process
 from clarity_ext import utils
 from clarity_ext.mappers.clarity_mapper import ProjectClarityMapper
 
@@ -29,6 +29,8 @@ class ClarityService(object):
             elif isinstance(item, Container) or isinstance(item, Sample):
                 # TODO: This is temporarily limited to Sample and Container. LIMS-1057
                 other_domain_objects.append(item)
+            elif isinstance(item, Process):
+                self._update_process(item)
             else:
                 raise NotImplementedError("No update method available for {}".format(type(item)))
 
@@ -46,6 +48,13 @@ class ClarityService(object):
 
         if len(artifacts) > 0:
             self._update_artifacts(artifacts)
+
+    def _update_process(self, process):
+        # Updates the process itself. Currently only the udfs
+        for item in process.udf_map.enumerate_updated():
+            print(item.key, item.value)
+            process.api_resource.udf[item.key] = item.value
+        process.api_resource.put()
 
     def _update_artifacts(self, artifacts):
         # Filter out artifacts that don't have any updated fields:
