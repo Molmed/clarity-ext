@@ -18,8 +18,11 @@ class Process(DomainObjectWithUdfMixin):
         from clarity_ext.service.process_service import ProcessService
         process_service = ProcessService()
         ui_link = process_service.ui_link_process(resource)
+        instrument = None
+        if resource.instrument:
+            instrument = resource.instrument.name
         ret = Process(resource, resource.id, resource.technician, udf_map,
-                      ui_link, resource.instrument)
+                      ui_link, instrument)
         return ret
 
 
