@@ -61,7 +61,8 @@ class TestUdfMappingInfo(unittest.TestCase):
         self._test_can_set_udf_on_domain_object(domain_object)
 
     def test_can_set_udf_on_process(self):
-        domain_object = Process(None, "pid", None, self._get_unique_udf_mapping(), "https://notavail")
+        domain_object = Process(None, "pid", None, self._get_unique_udf_mapping(),
+                                "https://notavail", "some instrument")
         self._test_can_set_udf_on_domain_object(domain_object)
 
     def _test_can_set_udf_on_domain_object(self, domain_object):
