@@ -263,11 +263,12 @@ class ExtensionContext(object):
 
     def commit(self):
         """Commits all objects that have been added via the update method, using batch processing if possible"""
-        self._calls_to_commit += 1
-        if self._calls_to_commit > 1:
-            self.logger.warning("Commit called more than once. It's not necessary to call commit explicitly anymore.")
         self.clarity_service.update(self._update_queue, self.disable_commits)
         self.file_service.commit(self.disable_commits)
+
+        # Clear the update queue (the previous calls don't do that) in case we want to call
+        # commit again.
+        self._update_queue.clear()
 
     @lazyprop
     def current_process_type(self):
