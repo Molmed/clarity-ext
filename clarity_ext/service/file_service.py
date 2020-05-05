@@ -256,6 +256,9 @@ class FileService:
                 raise NotImplementedError("Type not supported")
         return full_path
 
+    def list_filenames(self, file_handle):
+        return self.local_shared_file_provider.list_filenames(file_handle)
+
 
 class LocalSharedFileProvider:
     def __init__(self, file_service, file_repo, artifact_service, downloaded_path, os_service, should_cache, logger):
@@ -266,6 +269,14 @@ class LocalSharedFileProvider:
         self.os_service = os_service
         self.should_cache = should_cache
         self.logger = logger
+
+    def list_filenames(self, file_handle):
+        shared_files = self.artifact_service.shared_files()
+        by_handle = [
+            shared_file for shared_file in shared_files
+            if shared_file.name == file_handle
+        ]
+        return [a.files[0].original_location for a in by_handle]
 
     def search_existing(self, file_handle, mode='r', extension="", modify_attached=False, file_name_contains=None):
         artifact = self._artifact_by_name(file_handle, file_name_contains)
