@@ -50,6 +50,7 @@ class ClarityMapper(object):
         project = Project(resource.project.name) if resource.project else None
         udf_map = UdfMapping(resource.udf)
         sample = Sample(resource.id, resource.name, project, udf_map)
+        sample.api_resource = resource
         self._after_object_created(sample, resource)
         return sample
 
