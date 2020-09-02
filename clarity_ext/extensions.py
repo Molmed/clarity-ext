@@ -16,7 +16,7 @@ from clarity_ext.service import ArtifactService, FileService
 from clarity_ext.utility.integration_test_service import IntegrationTest
 from clarity_ext.service.dilution.index_generation import ConfigValidator
 from clarity_ext.service.dilution.index_generation import ConfigParser
-from jinja2 import Template
+from jinja2 import Template, Environment, PackageLoader
 import time
 import random
 import logging.handlers
@@ -693,22 +693,8 @@ class TemplateExtension(DriverFileExtension):
 
     def __init__(self, context):
         super(TemplateExtension, self).__init__(context)
-        file_name = sys.modules[self.__module__].__file__
-        self.template_dir = os.path.dirname(file_name)
         self.module_name = self.__module__.split(".")[-1]
 
-        # Search for a template with the same name as the module:
-        # If the module is called `example_tapestation_file.py`, this will
-        # search for any file that starts with `example_tapestation_file` and
-        # ends with j2 (the default jinja template extension)
-        candidates = list()
-        for candidate_file in os.listdir(self.template_dir):
-            candidate_file_parts = candidate_file.split(".")
-            if candidate_file_parts[0] == self.module_name and candidate_file_parts[-1] == "j2":
-                candidates.append(candidate_file)
-        if len(candidates) > 1:
-            raise ValueError("More than one template file found: ", ",".join(candidates))
-        self.default_template_name = candidates[0] if len(candidates) == 1 else None
         self.output_by_input_id = None
 
     def build_artifact_dict(self):
@@ -724,13 +710,45 @@ class TemplateExtension(DriverFileExtension):
         return self.output_by_input_id[input_id]
 
     @property
-    def template_path(self):
-        """Returns the name of the template. By default, it will use the convention of returning the template
-        named `<current module>.templ.*` if one is found."""
-        return os.path.join(self.template_dir, self.default_template_name)
+    def template_dir(self):
+        raise NotImplementedError("This property is not available anymore. "
+                "Please use the template_module function.")
+
+    @property
+    def template_module(self):
+        """
+        Return the full name of the module that contains the template, e.g.
+        clarity_ext_scripts.fragment_analyzer
+        """
+        return ".".join(self.__module__.split('.')[0:-1])
+
+    @property
+    def template_name(self):
+        raise NotImplementedError()
+        # Search for a template with the same name as the module:
+        # If the module is called `example_tapestation_file.py`, this will
+        # search for any file that starts with `example_tapestation_file` and
+        # ends with j2 (the default jinja template extension)
+        candidates = list()
+        for candidate_file in os.listdir(self.template_dir):
+            candidate_file_parts = candidate_file.split(".")
+            if candidate_file_parts[0] == self.module_name and candidate_file_parts[-1] == "j2":
+                candidates.append(candidate_file)
+        if len(candidates) > 1:
+            raise ValueError("More than one template file found: ", ",".join(candidates))
+        ret = candidates[0] if len(candidates) == 1 else None
+        return ret
 
     def content(self):
-        with open(self.template_path, 'r') as fs:
+        mod_split = self.template_module.split('.')
+        package = mod_split[0]
+        mod_path = '.'.join(mod_split[1:])
+        print("NEW=========---", package, mod_path)
+        env = Environment(loader=PackageLoader(package, mod_path))
+        template = env.get_template(self.template_name)
+        raise R
+
+        with open(template_path, 'r') as fs:
             text = fs.read()
             text = codecs.decode(text, "utf-8")
             windows_eol = '\r\n'
