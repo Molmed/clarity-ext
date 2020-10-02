@@ -94,6 +94,7 @@ def extension(module, mode, args, cache):
             mode = "test"
             validate_against_frozen = False
 
+        print("STARTING")
         extension_svc = ExtensionService(lambda msg: print(msg))
         if mode == ExtensionService.RUN_MODE_FREEZE:
             extension_svc.run_freeze(config, args, module)

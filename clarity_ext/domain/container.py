@@ -256,6 +256,7 @@ class Container(DomainObjectWithUdfMixin):
             yield self.wells[key]
 
     def list_wells(self, order=DOWN_FIRST):
+        print("LISTING")
         return list(self.enumerate_wells(order))
 
     def set_well(self, well_pos, artifact=None):

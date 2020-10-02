@@ -246,6 +246,7 @@ class ExtensionService(object):
         return getattr(module_obj, "Extension")
 
     def _run(self, path, pid, module, artifacts_to_stdout, disable_context_commit=False, test_mode=False):
+        print("RUNNING")
         path = os.path.abspath(path)
         self.logger.info("Running extension {module} for pid={pid}, test_mode={test_mode}".format(
             module=module, pid=pid, test_mode=test_mode))

@@ -45,6 +45,7 @@ class StepRepository(object):
         instead.
         """
         input_output_maps = self.session.current_step.api_resource.input_output_maps
+        print(input_output_maps)
         artifact_keys = set()
         for input, output in input_output_maps:
             artifact_keys.add(input["uri"])
