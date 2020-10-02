@@ -26,7 +26,7 @@ class ClarityMapper(object):
         self.map = dict()
 
         # Cache of all domain objects, indexed by the ID in the LIMS
-        # TODO: Currently just caching analytes 
+        # TODO: Currently just caching analytes
         self.domain_map = dict()
 
         # TODO: The container_repo used here could be reused per the lifetime of the mapper instead, and not
@@ -49,7 +49,8 @@ class ClarityMapper(object):
     def sample_create_object(self, resource):
         project = Project(resource.project.name) if resource.project else None
         udf_map = UdfMapping(resource.udf)
-        sample = Sample(resource.id, resource.name, project, udf_map)
+        sample = Sample(resource.id, resource.name,
+                        project, udf_map, mapper=self)
         self._after_object_created(sample, resource)
         return sample
 
@@ -88,6 +89,7 @@ class ClarityMapper(object):
             return self.domain_map[resource.id]
 
         udfs = None
+        print("BEFORE PLACE")
         if not is_input:
             # Get the process-output section, output_generation_type is either PerInput for regular analytes or
             # PerAllInputs for pools
@@ -97,6 +99,7 @@ class ClarityMapper(object):
             process_output = utils.single_or_default(per_input_analytes)
             if process_output:
                 udfs = UdfMapping.expand_udfs(resource, process_output)
+        print("AFTER PLACE")
 
         if udfs is None:
             udfs = resource.udf
@@ -105,19 +108,19 @@ class ClarityMapper(object):
 
         well = self.well_create_object(resource, container_repo, is_input)
 
-        # TODO: sample should be put in a lazy property, and all samples in a step should be
-        # loaded in one batch
-        samples = [self.sample_create_object(
-            sample) for sample in resource.samples]
-
         is_control = self._is_control(resource)
         # TODO: A better way to decide if analyte is output of a previous step?
         is_from_original = (resource.id.find("2-") != 0)
-        analyte = Analyte(api_resource=resource, is_input=is_input, id=resource.id,
-                          samples=samples, name=resource.name,
-                          well=well, is_control=is_control,
+        analyte = Analyte(api_resource=resource,
+                          is_input=is_input,
+                          id=resource.id,
+                          samples=resource.samples,
+                          name=resource.name,
+                          well=well,
+                          is_control=is_control,
                           udf_map=udf_map,
-                          is_from_original=is_from_original)
+                          is_from_original=is_from_original,
+                          mapper=self)
         analyte.api_resource = resource
         self._after_object_created(analyte, resource)
         self.domain_map[resource.id] = analyte
@@ -133,7 +136,8 @@ class ClarityMapper(object):
     def well_create_object(self, resource, container_repo, is_source):
         # TODO: Batch call
         try:
-            container = container_repo.get_container(resource.location[0], is_source)
+            container = container_repo.get_container(
+                resource.location[0], is_source)
         except AttributeError:
             container = None
         try:
@@ -164,12 +168,12 @@ class ClarityMapper(object):
         udf_map = UdfMapping(udfs)
 
         well = self.well_create_object(resource, container_repo, is_input)
-
-        # TODO: sample should be put in a lazy property, and all samples in a step should be
-        # loaded in one batch
-        samples = [self.sample_create_object(
-            sample) for sample in resource.samples]
-        ret = ResultFile(api_resource=resource, is_input=is_input,
-                         id=resource.id, samples=samples, name=resource.name, well=well,
-                         udf_map=udf_map)
+        ret = ResultFile(api_resource=resource,
+                         is_input=is_input,
+                         id=resource.id,
+                         samples=resource.samples,
+                         name=resource.name,
+                         well=well,
+                         udf_map=udf_map,
+                         mapper=self)
         return ret

@@ -10,10 +10,15 @@ class Aliquot(Artifact):
     of the original for example. Or, in the case of ResultFile, only a measurement of the original.
     """
 
-    def __init__(self, api_resource, is_input, id=None, samples=None, name=None, well=None, udf_map=None):
+    def __init__(self, api_resource, is_input, id=None, samples=None, name=None, well=None, udf_map=None, mapper=None):
         super(Aliquot, self).__init__(api_resource=api_resource, artifact_id=id, name=name, udf_map=udf_map,
-                                      is_input=is_input)
-        self.samples = samples
+                                      is_input=is_input, mapper=mapper)
+
+        # NOTE: This is a quick fix for extremely slow loading of large pools
+        if samples:
+            self._samples_lazy_loaded = not isinstance(samples[0], Sample)
+        self._samples = samples
+
         self.well = well
         if well:
             self.container = well.container
@@ -23,26 +28,35 @@ class Aliquot(Artifact):
         self.is_from_original = False
 
     @property
+    def samples(self):
+        if self._samples_lazy_loaded:
+            self._samples = [self._mapper.sample_create_object(sample)
+                             for sample in self._samples]
+
+    @property
     def is_pool(self):
-        if self.samples is None:
+        if self._samples is None:
             # TODO: Happens only in a test, fix that...
             return False
-        return len(self.samples) > 1
+        return len(self._samples) > 1
 
 
 class Sample(DomainObjectWithUdfMixin):
 
-    def __init__(self, sample_id, name, project, udf_map=None):
+    def __init__(self, sample_id, name, project, udf_map=None, is_lazy_loaded=False,
+                       mapper=None):
         """
         :param sample_id: The ID of the sample
         :param name: The name of the sample
         :param project: The project domain object
         :param udf_map: An UdfMapping
+        :param mapper: The ClarityMapper
         """
         super(Sample, self).__init__(udf_map=udf_map)
         self.id = sample_id
         self.name = name
         self.project = project
+        self._mapper = mapper
 
     def __repr__(self):
         return "<Sample id={}>".format(self.id)
@@ -51,4 +65,3 @@ class Sample(DomainObjectWithUdfMixin):
 class Project(DomainObjectWithUdfMixin):
     def __init__(self, name):
         self.name = name
-

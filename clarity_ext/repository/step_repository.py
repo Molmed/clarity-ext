@@ -44,22 +44,26 @@ class StepRepository(object):
         for simplified use of the API. If optimal performance is required, use the underlying REST API
         instead.
         """
+        import time
+        t = time.time()
         input_output_maps = self.session.current_step.api_resource.input_output_maps
-        print(input_output_maps)
         artifact_keys = set()
         for input, output in input_output_maps:
             artifact_keys.add(input["uri"])
             artifact_keys.add(output["uri"])
+
         artifacts = self.session.api.get_batch(artifact_keys)
         artifacts_by_uri = {artifact.uri: artifact for artifact in artifacts}
         for input, output in input_output_maps:
             input['uri'] = artifacts_by_uri[input['uri'].uri]
             output['uri'] = artifacts_by_uri[output['uri'].uri]
+        print("DONE fetching all artifacts via api.get_batch, took:", time.time() - t)
 
         # Artifacts do not contain UDFs that have not been given a value. Since the domain objects returned
         # must know all UDFs available, we fetch them here:
         # TODO: Move this to the service
         process_type = self.get_process_type()
+        print("DONE fetching process_type:", time.time() - t)
 
         ret = []
         # TODO: Ensure that the container repo fetches all containers in one batch call:
@@ -71,11 +75,12 @@ class StepRepository(object):
         for input_res, output_res in input_output_maps:
             input, output = self._wrap_input_output(
                 input_res, output_res, container_repo, process_type)
-            # Check if we already have an output with this id, and use that instead in that case:
+
             if output.id in outputs_by_id:
                 output = outputs_by_id[output.id]
             ret.append((input, output))
             outputs_by_id[output.id] = output
+
         return ret
 
     def _wrap_input_output(self, input_info, output_info, container_repo, process_type):
@@ -85,13 +90,32 @@ class StepRepository(object):
 
         # Create a fresh container repository. Then we know that only one container
         # will be created for each object in a call to this method
+        def log(msg):
+            if input_info['limsid'] == '2-967109':
+                print(msg)
+
+
         input_resource = input_info["uri"]
         output_resource = output_info["uri"]
         output_gen_type = output_info["output-generation-type"]
+
+        log("START WRAPPING INPUT!!!!")
+
         input = self._wrap_artifact(
-            input_resource, container_repo, gen_type="Input", is_input=True, process_type=process_type)
-        output = self._wrap_artifact(output_resource, container_repo,
-                                     gen_type=output_gen_type, is_input=False, process_type=process_type)
+            input_resource,
+            container_repo,
+            gen_type="Input",
+            is_input=True,
+            process_type=process_type)
+
+        log("START WRAPPING OUTPUT!!!!")
+        output = self._wrap_artifact(
+                output_resource,
+                container_repo,
+                gen_type=output_gen_type,
+                is_input=False,
+                process_type=process_type)
+        log("END WRAPPING OUTPUT!!!!")
 
         if output_gen_type == "PerInput":
             output.generation_type = Artifact.PER_INPUT
@@ -117,6 +141,7 @@ class StepRepository(object):
         Wraps an artifact in a domain object, if one exists. The domain objects provide logic
         convenient methods for working with the domain object in extensions.
         """
+
         if artifact.type == "Analyte":
             wrapped = self.clarity_mapper.analyte_create_object(
                 artifact, is_input, container_repo, process_type)

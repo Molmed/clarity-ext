@@ -13,13 +13,13 @@ class Analyte(Aliquot):
     """
 
     def __init__(self, api_resource, is_input, id=None, samples=None, name=None, well=None,
-                 is_control=False, udf_map=None, is_from_original=None):
+                 is_control=False, udf_map=None, is_from_original=None, mapper=None):
         """
         Creates an analyte
         """
         super(self.__class__, self).__init__(api_resource, is_input=is_input, id=id,
                                              samples=samples, name=name, well=well,
-                                             udf_map=udf_map)
+                                             udf_map=udf_map, mapper=mapper)
         self.is_control = is_control
         self.is_output_from_previous = is_from_original
         self.reagent_labels = None
