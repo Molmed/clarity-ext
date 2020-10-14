@@ -102,16 +102,18 @@ class ClarityService(object):
 
     def create_container(self, in_mem_container, with_samples=False, assign_to=None):
         """
-        Creates the container and all samples in it. 
+        Creates the container and all samples in it.
 
         Requires a container and samples that do not have an ID. The samples are interpreted as
         original samples, not analytes.
         """
+        # TODO: Supporting sending in several containers and create them via a batch call too
+
         if in_mem_container.id:
             raise AssertionError("This container already has an ID: {}".format(container))
         container_type = utils.single(
                 self.session.api.get_containertypes(name=in_mem_container.container_type))
-        
+
         container_res = entities.Container.create(
                 self.session.api, name=in_mem_container.name, type=container_type)
         in_mem_container.id = container_res.id
@@ -119,22 +121,25 @@ class ClarityService(object):
         if not with_samples:
             return in_mem_container
 
-        created_artifacts = list()
+        instances = list()
 
-        # TODO: Do this in a batch call
         for well in in_mem_container.occupied:
             sample = well.artifact
             if sample.id:
                 raise AssertionError("This sample already has an ID: {}".format(sample))
-
-            sample_res = entities.Sample.create(
+            instance = entities.Sample.create_in_memory_instance(
                     self.session.api,
-                    container=container_res,
+                    container_res,
                     position=repr(well.position),
                     name=sample.name,
                     project=sample.project.api_resource,
                     udfs=sample.udf_map.to_dict())
+            instances.append(instance)
 
+        instances = entities.Sample.batch_create(self.session.api, instances)
+
+        created_artifacts = list()
+        for sample_res in instances:
             artifact = entities.Artifact(self.session.api, id=sample_res.id + "PA1")
             created_artifacts.append(artifact)
 
