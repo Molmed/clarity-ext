@@ -1,87 +1,52 @@
-from builtins import isinstance
 import copy
+from abc import ABCMeta, abstractmethod
 
+# SLOWNESS BUG: the problem is eventually in this code. It could be fixed somewhere further down
+# the stack, but I think it's better to fix it here.
 
-class DomainObjectMixin(object):
+# Affected:
+# class DomainObjectMixin(object)
+#   class AssignLogger(DomainObjectMixin): Implemented
+#   class DomainObjectWithUdfMixin(DomainObjectMixin)
+#     class Process(DomainObjectWithUdfMixin)
+#     class Artifact(DomainObjectWithUdfMixin)
+#       class SharedResultFile(Artifact)
+#       class Aliquot(Artifact)
+#     class Container(DomainObjectWithUdfMixin)
+#     class Sample(DomainObjectWithUdfMixin)
+#     class Project(DomainObjectWithUdfMixin)
+#   class Well(DomainObjectMixin)
 
+class DomainObjectMixin(object, metaclass=ABCMeta):
     def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self._eq_rec(self, other)
-        else:
-            return False
+        return (self.id == other.id and self._equals(other))
+
+    @abstractmethod
+    def _equals(self, other):
+        """
+        Domain class specific equality check. All domain objects must implement this method.
+        """
+
+        # We raise here so we'll catch classes that don't clearly specify equality
+        raise NotImplementedError()
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __hash__(self):
         return hash(self.id)
 
     def __lt__(self, other):
-        return self.compare(other) < 0
-
-    def __gt__(self, other):
-        return self.compare(other) > 0
-
-    def __le__(self, other):
-        return self.compare(other) <= 0
-
-    def __ge__(self, other):
-        return self.compare(other) >= 0
-
-    def compare(self, other):
-        # Override if needed
-        if self._eq_rec(self, other) == 0:
-            return 0
-        elif str(self) < str(other):
-            return -1
-        return 1
-
-    def _eq_rec(self, a, b, cache=[]):
-        """
-        Replaces the == operator because of circulating references (e.g. analyte <-> well)
-        Adapted solution taken from
-        http://stackoverflow.com/questions/31415844/using-the-operator-on-circularly-defined-dictionaries
-        """
-        cache = cache + [a, b]
-        if isinstance(a, DomainObjectMixin):
-            a = a.__dict__
-        if isinstance(b, DomainObjectMixin):
-            b = b.__dict__
-        if not isinstance(a, dict) or not isinstance(b, dict):
-            return a == b
-
-        set_keys = set(a.keys())
-        if set_keys != set(b.keys()):
-            return False
-
-        for key in set_keys:
-            if any(a[key] is i for i in cache):
-                continue
-            elif any(b[key] is i for i in cache):
-                continue
-            elif a[key].__class__.__name__ == "MagicMock" and a[key].__class__.__name__ == "MagicMock":
-                # TODO: Move this to the tests. The domain objects shouldn't have to directly know about this
-                # filter out mocked fields
-                continue
-            elif not self._eq_rec(a[key], b[key], cache):
-                return False
-        return True
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def differing_fields(self, other):
-        if isinstance(other, self.__class__):
-            ret = []
-            for key in self.__dict__:
-                if self.__dict__.get(key, None) != other.__dict__.get(key, None):
-                    ret.append(key)
-            return ret
-        else:
-            return None
+        return self.id < other.id
 
 
 class AssignLogger(DomainObjectMixin):
     def __init__(self, domain_object_mixin):
         self.log = []
         self.domain_object_mixin = domain_object_mixin
+
+    def __eq__(self, other):
+        return self.domain_object_mixin == other.domain_object_mixin
 
     def register_assign(self, field_name, value):
         class_name = self.domain_object_mixin.__class__.__name__

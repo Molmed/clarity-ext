@@ -17,6 +17,7 @@ class DomainObjectWithUdfMixin(DomainObjectMixin):
         self.api_resource = api_resource
         self.id = id
 
+
     def __getattr__(self, key):
         """Getter that supports access to the extra udf_ attributes"""
         if key != "udf_map" and key.startswith("udf_"):

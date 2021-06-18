@@ -22,6 +22,9 @@ class Well(DomainObjectMixin):
         self.container = container
         self.artifact = artifact
 
+    # def __eq__(self, other):
+    #     return (self.other.position ==
+
     @property
     def is_empty(self):
         return self.artifact is None
