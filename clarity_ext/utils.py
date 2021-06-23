@@ -17,38 +17,6 @@ def lazyprop(fn):
         return getattr(self, attr_name)
     return _lazyprop
 
-# Monkey patch the sqlite cache in requests_cache so that it doesn't save
-# the AUTH_HEADER
-default_dbdict_set_item = requests_cache.backends.storage.dbdict.DbPickleDict.__setitem__
-default_dbdict_get_item = requests_cache.backends.storage.dbdict.DbPickleDict.__getitem__
-AUTH_HEADER = 'Authorization'
-
-
-def dbdict_set_item(self, key, item):
-    """Updates the AUTH_HEADER before caching the response"""
-    store = item[0]
-    if AUTH_HEADER in store.request.headers:
-        store.request.headers[AUTH_HEADER] = '***'
-    default_dbdict_set_item(self, key, item)
-
-
-def dbdict_get_item(self, key):
-    """
-    Fetches the AUTH_HEADER value, but asserts that the AUTH_HEADER hasn't been cached.
-
-    The AUTH_HEADER should not be saved by default (see dbdict_set_item). This patch
-    ensures that it will be detected early if that happens.
-    """
-    item = default_dbdict_get_item(self, key)
-    store = item[0]
-    if AUTH_HEADER in store.request.headers and \
-                      store.request.headers[AUTH_HEADER] != '***':
-        raise ValueError("Auth header was serialized")
-    return item
-
-requests_cache.backends.storage.dbdict.DbPickleDict.__setitem__ = dbdict_set_item
-requests_cache.backends.storage.dbdict.DbPickleDict.__getitem__ = dbdict_get_item
-
 
 def use_requests_cache(cache):
     """Turns on caching for the requests library"""

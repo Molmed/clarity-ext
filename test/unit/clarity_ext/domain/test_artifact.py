@@ -1,18 +1,25 @@
 import unittest
+from clarity_ext.domain.artifact import Artifact
 from test.unit.clarity_ext.helpers import fake_analyte, fake_result_file
 from test.unit.clarity_ext.helpers import fake_shared_result_file
 from test.unit.clarity_ext.helpers import fake_container
 from mock import MagicMock
 from clarity_ext.unit_conversion import UnitConversion
-from clarity_ext.domain import Artifact
 from clarity_ext.domain.result_file import ResultFile
 from clarity_ext.domain.shared_result_file import SharedResultFile
 from test.unit.clarity_ext.helpers import mock_artifact_resource
 from test.unit.clarity_ext.helpers import mock_container_repo
 from clarity_ext.mappers.clarity_mapper import ClarityMapper
+from .shared import DomainObjectTestCase
+
+# class TestArtifactDomainObjectProperties(DomainObjectTestCase):
+#         self.basic_domain_properties_check(logger1, logger2)
 
 
-class TestArtifact(unittest.TestCase):
+class TestArtifact(DomainObjectTestCase):
+    def create_instance(self):
+        return Artifact()
+
     def test_two_identical_artifacts_equal(self):
         """A copy of an artifact should be equal to another"""
         artifacts = [ResultFile(api_resource=None, is_input=False),

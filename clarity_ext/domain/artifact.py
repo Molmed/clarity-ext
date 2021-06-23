@@ -1,8 +1,7 @@
-from clarity_ext.domain.udf import DomainObjectWithUdfMixin
-from clarity_ext.domain.common import DomainObjectMixin
+from clarity_ext.domain.udf import DomainObjectWithUdf
 
 
-class Artifact(DomainObjectWithUdfMixin):
+class Artifact(DomainObjectWithUdf):
     """
     Represents any input or output artifact from the Clarity server, e.g. an Analyte
     or a ResultFile.

@@ -1,14 +1,69 @@
-from clarity_ext.domain.udf import DomainObjectWithUdfMixin, UdfMapping
+from clarity_ext.domain.udf import DomainObjectWithUdf, UdfMapping
 
 
-class Process(DomainObjectWithUdfMixin):
+class Process(DomainObjectWithUdf):
     """Represents a Process (step)"""
 
-    def __init__(self, api_resource, process_id, technician, udf_map, ui_link, instrument=None):
+    def __init__(self, api_resource, process_id, technician,
+            udf_map=None, ui_link=None, instrument=None):
         super(Process, self).__init__(api_resource, process_id, udf_map)
         self.technician = technician
         self.ui_link = ui_link
         self.instrument = instrument
+
+    # def __eq__(self, other):
+    #     def lab_eq(a, b):
+    #         return (
+
+    #     def technician_eq(a, b):
+    #         return (a.first_name == b.first_name and
+    #                 a.last_name == b.last_name and
+    #                 a.phone == b.phone and
+    #                 a.fax == b.fax and
+    #                 a.email == b.email and
+    #                 a.initials == b.initials and
+
+
+
+
+    # first_name  = StringDescriptor('first-name')
+    # last_name   = StringDescriptor('last-name')
+    # phone       = StringDescriptor('phone')
+    # fax         = StringDescriptor('fax')
+    # email       = StringDescriptor('email')
+    # initials    = StringDescriptor('initials')
+    # lab         = EntityDescriptor('lab', Lab)
+    # udf         = UdfDictionaryDescriptor()
+    # udt         = UdtDictionaryDescriptor()
+    # externalids = ExternalidListDescriptor()
+
+    # # credentials XXX
+    # username = NestedStringDescriptor('username', 'credentials')
+    # account_locked = NestedBooleanDescriptor('account-locked', 'credentials')
+
+
+# class Lab(Entity):
+    # "Lab; container of researchers."
+
+    # _URI = 'labs'
+    # _PREFIX = 'lab'
+
+    # name             = StringDescriptor('name')
+    # billing_address  = StringDictionaryDescriptor('billing-address')
+    # shipping_address = StringDictionaryDescriptor('shipping-address')
+    # udf              = UdfDictionaryDescriptor()
+    # udt              = UdtDictionaryDescriptor()
+    # externalids      = ExternalidListDescriptor()
+    # website          = StringDescriptor('website')
+
+
+
+
+
+        return (super().__eq__(other) and
+                compare_technician(self.technician, other.technician) and
+                self.ui_link == other.ui_link and
+                self.instrument == other.instrument)
 
     @staticmethod
     def create_from_rest_resource(resource):
@@ -21,7 +76,10 @@ class Process(DomainObjectWithUdfMixin):
         instrument = None
         if resource.instrument:
             instrument = resource.instrument.name
-        ret = Process(resource, resource.id, resource.technician, udf_map,
+        ret = Process(resource,
+                      resource.id,
+                      Technician.create_from_resource(resource.technician),
+                      udf_map,
                       ui_link, instrument)
         return ret
 

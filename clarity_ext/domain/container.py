@@ -1,11 +1,11 @@
 from collections import namedtuple
 from clarity_ext.utils import lazyprop
-from clarity_ext.domain.common import DomainObjectMixin
-from clarity_ext.domain.udf import DomainObjectWithUdfMixin
+from clarity_ext.domain.common import DomainObject
+from clarity_ext.domain.udf import DomainObjectWithUdf
 from clarity_ext.domain.udf import UdfMapping
 
 
-class Well(DomainObjectMixin):
+class Well(DomainObject):
     """
     Encapsulates a location in a container.
 
@@ -111,7 +111,7 @@ class PlateSize(namedtuple("PlateSize", ["height", "width"])):
     pass
 
 
-class Container(DomainObjectWithUdfMixin):
+class Container(DomainObjectWithUdf):
     """Encapsulates a Container"""
 
     DOWN_FIRST = 1

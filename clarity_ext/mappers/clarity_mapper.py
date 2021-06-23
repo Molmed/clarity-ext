@@ -38,7 +38,7 @@ class ClarityMapper(object):
     def _after_object_created(self, domain_object, resource):
         # See NOTE above. This mapping is only required while we're still not building the rest resources
         # directly from the domain objects.
-        self.map[domain_object] = resource
+        self.map[domain_object.id] = resource
 
     def _get_from_cache(self, domain_object):
         if domain_object not in self.map:
