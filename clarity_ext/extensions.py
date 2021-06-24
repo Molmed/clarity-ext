@@ -1,4 +1,3 @@
-
 import importlib
 import os
 import sys
@@ -27,6 +26,7 @@ import logging.handlers
 import lxml.objectify
 from clarity_ext.service.validation_service import UsageError
 import re
+from clarity_ext.cache import use_requests_cache
 
 
 # Defines all classes that are expected to be extended. These are
@@ -243,7 +243,7 @@ class ExtensionService(object):
     def _set_cache(self, use_cache):
         if use_cache:
             self.logger.info("Using cache {}".format(self.CACHE_NAME))
-            utils.use_requests_cache(self.CACHE_NAME)
+            use_requests_cache(self.CACHE_NAME)
 
     def _get_extension(self, module):
         module_obj = importlib.import_module(module)

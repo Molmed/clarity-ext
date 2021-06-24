@@ -1,4 +1,3 @@
-import requests_cache
 import os
 import shutil
 import hashlib
@@ -17,11 +16,6 @@ def lazyprop(fn):
         return getattr(self, attr_name)
     return _lazyprop
 
-
-def use_requests_cache(cache):
-    """Turns on caching for the requests library"""
-    requests_cache.install_cache(
-        cache, allowable_methods=('GET', 'POST', 'DELETE', 'PUT'))
 
 
 def clean_directory(path, skip=[]):

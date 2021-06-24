@@ -19,10 +19,6 @@ class DomainObjectWithUdf(DomainObject):
         self.udf_map = udf_map
         self.api_resource = api_resource
 
-    def __eq__(self, other):
-        return (super().__eq__(other) and
-                self.udf_map == other.udf_map)
-
     def __getattr__(self, key):
         """Getter that supports access to the extra udf_ attributes"""
         if key != "udf_map" and key.startswith("udf_"):

@@ -25,78 +25,18 @@ class DomainObject(object):
         self.id = id
 
     def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self._eq_rec(self, other)
-        else:
-            return False
+        self.id == other.id
 
+    # TEMPORARY: Allow all domain objects to be hashable, even if we define eq, because
+    # equality check is based only on the id
     def __hash__(self):
         return hash(self.id)
 
     def __lt__(self, other):
-        return self.compare(other) < 0
-
-    def __gt__(self, other):
-        return self.compare(other) > 0
-
-    def __le__(self, other):
-        return self.compare(other) <= 0
-
-    def __ge__(self, other):
-        return self.compare(other) >= 0
-
-    def compare(self, other):
-        # Override if needed
-        if self._eq_rec(self, other) == 0:
-            return 0
-        elif str(self) < str(other):
-            return -1
-        return 1
-
-    #MUTABLE?! (set used in this method)
-    def _eq_rec(self, a, b, cache=[]):
-        """
-        Replaces the == operator because of circulating references (e.g. analyte <-> well)
-        Adapted solution taken from
-        http://stackoverflow.com/questions/31415844/using-the-operator-on-circularly-defined-dictionaries
-        """
-        cache = cache + [a, b]
-        if isinstance(a, DomainObject):
-            a = a.__dict__
-        if isinstance(b, DomainObject):
-            b = b.__dict__
-        if not isinstance(a, dict) or not isinstance(b, dict):
-            return a == b
-
-        set_keys = set(a.keys())
-        if set_keys != set(b.keys()):
-            return False
-
-        for key in set_keys:
-            if any(a[key] is i for i in cache):
-                continue
-            elif any(b[key] is i for i in cache):
-                continue
-            elif a[key].__class__.__name__ == "MagicMock" and a[key].__class__.__name__ == "MagicMock":
-                # TODO: Move this to the tests. The domain objects shouldn't have to directly know about this
-                # filter out mocked fields
-                continue
-            elif not self._eq_rec(a[key], b[key], cache):
-                return False
-        return True
+        return self.id < other.id
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-    def differing_fields(self, other):
-        if isinstance(other, self.__class__):
-            ret = []
-            for key in self.__dict__:
-                if self.__dict__.get(key, None) != other.__dict__.get(key, None):
-                    ret.append(key)
-            return ret
-        else:
-            return None
 
 
 class AssignLogger(DomainObject):
