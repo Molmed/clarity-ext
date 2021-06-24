@@ -83,47 +83,48 @@ def validate(module):
         sys.exit(validation_exceptions)
 
 
+modes = [ExtensionService.RUN_MODE_TEST,
+         ExtensionService.RUN_MODE_EXEC, "exec", "test", "tape"]
+
+
 @main.command()
 @click.argument("module")
-@click.argument("mode")
+@click.argument("mode", type=click.Choice(modes))
 @click.option("--args")
+@click.option("--description", type=str)
 @click.option("--cache", type=bool)
-def extension(module, mode, args, cache):
+def extension(module, mode, args, cache, description):
     """Loads the extension and executes the integration tests.
 
     :param mode: One of
         exec: Execute the code in normal mode
         test: Test the code locally
-        freeze: Freeze an already created test (move from test-run to test-frozen)
-        validate: Test the code locally, then compare with the frozen directory
+        tape: Works the same way as test, but uses a 'tape file', i.e. a recording of all requests
+              and responses. If the tape file already exists, runs the test on the tape file
+              results. If the user is happy with the results they should save the tape. The CI
+              will then run all the tapes.
     :param args: Dynamic parameters to the extension
     """
     global config
     default_logging()
     try:
-
         # Parse the run arguments list:
         if args and isinstance(args, str):
             separated = args.split(" ")
             key_values = (argument.split("=") for argument in separated)
             args = [{key: value for key, value in key_values}]
 
-        validate_against_frozen = True  # Indicates a run that should ignore the frozen directory
-        if mode == "test-fresh":
-            mode = "test"
-            validate_against_frozen = False
-
         extension_svc = ExtensionService(lambda msg: print(msg))
-        if mode == ExtensionService.RUN_MODE_FREEZE:
-            extension_svc.run_freeze(config, args, module)
-        elif mode == ExtensionService.RUN_MODE_TEST:
+        if mode == ExtensionService.RUN_MODE_TEST:
             extension_svc.set_log_strategy(log_level, True, False, True)
-            try:
-                extension_svc.run_test(config, args, module, True, cache, validate_against_frozen)
-            except ResultsDifferFromFrozenData as ex:
-                print("Results differ from frozen data: " + str(ex))
+            extension_svc.run_test(config, args, module, True, cache)
+        elif mode == ExtensionService.RUN_MODE_TAPE:
+            extension_svc.set_log_strategy(log_level, True, False, True)
+            extension_svc.run_test(config, args, module, True, False,
+                                   tape=True, description=description)
         elif mode == ExtensionService.RUN_MODE_EXEC:
-            extension_svc.set_log_strategy(log_level, False, True, True, "/opt/clarity-ext/logs", "extensions.log")
+            extension_svc.set_log_strategy(
+                log_level, False, True, True, "/opt/clarity-ext/logs", "extensions.log")
             extension_svc.run_exec(config, args, module)
         else:
             raise NotImplementedError("Mode '{}' is not implemented".format(mode))
@@ -135,7 +136,8 @@ def extension(module, mode, args, cache):
         msg = "There was an exception while running the extension: '{}'. ".format(ex) + \
               "Refer to the file 'Step log' if available."
         if extension_svc.rotating_file_path:
-            msg += " The application log is available in {}.".format(extension_svc.rotating_file_path)
+            msg += " The application log is available in {}.".format(
+                extension_svc.rotating_file_path)
         raise Exception(msg)
 
 
@@ -179,4 +181,3 @@ def fix_pycharm(package):
 
 if __name__ == "__main__":
     main()
-
