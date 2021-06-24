@@ -148,6 +148,7 @@ class ArtifactService:
         This method will fetch all of the input artifacts based on all of your output artifacts in one call
         and index them by their respective process id.
         """
+        # HASHABLE?
         # We will need the input artifacts from the previous step
         parent_processes = set([artifact.input.parent_process for artifact in self.all_output_artifacts()])
 

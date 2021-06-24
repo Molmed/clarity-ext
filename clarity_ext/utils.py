@@ -132,6 +132,35 @@ def get_jinja_template_from_package(package, name):
         if candidate_file == name:
             return os.path.join(templates_dir, candidate_file)
 
+def unique_by_key(lst, key_fn):
+    """
+    Returns a set of unique objects based on the key.
+
+    NOTE: This function was introduced to refactor code that used objects that were hashable
+    but shouldn't be (because they're mutable). So one can replace:
+
+    x = set(mutable for mutable in mutables)  # Implicitly requires a hash based on e.g. id
+
+    becomes:
+
+    x = set_by_key(mutables, key=lambda element: element.id)
+
+    Note however that the latter returns a list rather than a set
+    """
+    dct = dict()
+    for element in lst:
+        key = key_fn(element)
+        if key not in dct:
+            dct[key] = element
+    return dct.values()
+
+
+def unique_by_id(lst):
+    # Convenience functions for getting a list of unique domain objects, or any object that
+    # has an `id` attribute
+    return unique_by_key(lst, lambda x: x.id)
+
+
+
 class UnexpectedLengthError(ValueError):
     pass
-

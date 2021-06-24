@@ -48,7 +48,7 @@ class ExtensionContext(object):
         self.session = session
         self.logger = step_logger_service
         self.units = UnitConversion()
-        self._update_queue = set()
+        self._update_queue = list()
         self.current_step = step_repo.get_process()
         self.artifact_service = artifact_service
         self.file_service = file_service
@@ -259,7 +259,8 @@ class ExtensionContext(object):
 
     def update(self, obj):
         """Add an object that has a commit method to the list of objects to update"""
-        self._update_queue.add(obj)
+        if obj not in self._update_queue:
+            self._update_queue.append(obj)
 
     def commit(self):
         """Commits all objects that have been added via the update method, using batch processing if possible"""

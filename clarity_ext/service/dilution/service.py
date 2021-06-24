@@ -129,6 +129,7 @@ class DilutionSession(object):
             self.max_destination_volume = robotsettings.max_destination_volume_plate
 
     def _get_destination_container_type(self, transfers):
+        # HASHABLE: NO
         types = list(set([t.target_location.artifact.container.container_type for t in transfers]))
         return utils.single(types)
 
@@ -221,11 +222,18 @@ class DilutionSession(object):
         containers = dict()
         # First ensure that we've taken copies of the original containers, since we want to be able to move
         # the artifacts to different wells, it's cleaner to do that in a copied container:
-        original_containers = set()
-        original_containers.update([pair.input_artifact.container for pair in pairs])
-        original_containers.update([pair.output_artifact.container for pair in pairs])
+        original_containers = dict()
 
-        for original_container in original_containers:
+        for pair in pairs:
+            input_container = pair.input_artifact.container
+            output_container = pair.output_artifact.container
+
+            if input_container.id not in original_containers:
+                original_containers[input_container.id] = input_container
+            if output_container.id not in original_containers:
+                original_containers[output_container.id] = output_container
+
+        for original_container in original_containers.values():
             containers[original_container.id] = copy.copy(original_container)
 
         def create_well(artifact):
@@ -630,11 +638,11 @@ class SortStrategy:
         name_parts = re.split('[-_]+', container_name)
         name_sort_array = list()
         for part in name_parts:
-            strings = re.split('\d+', part)
+            strings = re.split(r'\d+', part)
             strings = [s for s in strings if s != '']
             strings = [x.lower() for x in strings]
 
-            numbers = re.split('\D+', part)
+            numbers = re.split(r'\D+', part)
             numbers = [n for n in numbers if n != '']
             numbers = [int(x) for x in numbers]
 
@@ -944,6 +952,7 @@ class TransferBatch(object):
     @property
     def container_mappings(self):
         """Returns a mapping between all source/target containers in the batch"""
+        # HASHABLE: NO
         ret = set()
         for transfer in self.transfers:
             if self._include_in_container_mappings(transfer) or len(self.transfers) == 1:
@@ -954,11 +963,13 @@ class TransferBatch(object):
 
     @property
     def target_container_slots(self):
+        # HASHABLE?
         return sorted(set(target for source, target in self.container_mappings),
                       key=lambda cont: cont.index)
 
     @property
     def source_container_slots(self):
+        # HASHABLE?
         return sorted(set(source for source, target in self.container_mappings),
                       key=lambda source: source.index)
 
@@ -1239,6 +1250,7 @@ class TransferRoute(object):
         s = set()
         q = list()  # Contains (node, level)
 
+        # HASHABLE?
         s.add(self.root)
         q.append((self.root, 0))
 
