@@ -4,7 +4,7 @@ import logging
 import re
 from itertools import groupby
 from itertools import chain
-import collections
+from collections.abc import Iterable
 from collections import namedtuple
 from abc import abstractmethod
 from clarity_ext.service.file_service import Csv
@@ -84,7 +84,7 @@ class DilutionSession(object):
         """
         transfer_handlers = list()
         for transfer_handler_type in transfer_handler_types:
-            if isinstance(transfer_handler_type, collections.Iterable):
+            if isinstance(transfer_handler_type, Iterable):
                 initialized = [t(self, dilution_settings, robot_settings, virtual_batch)
                                for t in transfer_handler_type]
                 transfer_handlers.append(OrTransferHandler(self, dilution_settings, robot_settings,

@@ -109,7 +109,7 @@ class BaseVcrTest(unittest.TestCase):
         runner = CliRunner()
 
         # This is a quick fix to get the context files out of the way
-        context_dir = os.path.realpath("./test/acceptance/runs/{module}/{step_id}/")
+        context_dir = os.path.realpath(f"./test/acceptance/runs/{module}/{step_id}/")
 
         if os.path.exists(context_dir):
             shutil.rmtree(context_dir)
