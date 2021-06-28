@@ -27,7 +27,6 @@ import lxml.objectify
 from clarity_ext.service.validation_service import UsageError
 import re
 from clarity_ext.cache import use_requests_cache
-import vcr
 
 
 # Defines all classes that are expected to be extended. These are
@@ -77,7 +76,7 @@ class ExtensionService(object):
             root_logger.addHandler(rotating_handler)
 
             if warn_dir_missing:
-                logging.warn(
+                logging.warning(
                     "The rotating log directory {} doesn't exist. Logging to ./ instead".format(rotating_log_dir))
 
     def _get_run_path(self, pid, module, mode, config):
@@ -127,6 +126,9 @@ class ExtensionService(object):
                  tape=False,
                  description=None):
 
+        if description:
+            description = description.replace(" ", "_")
+
         self._print_next_steps_help(module)
 
         if tape and use_cache:
@@ -143,8 +145,14 @@ class ExtensionService(object):
         if not run_arguments_list:
             run_arguments_list = self._gather_runs(module, True)
 
+        if len(run_arguments_list) > 1:
+            raise AssertionError("Providing more than one test at a time is deprecated behavior")
 
-        def run_single(pid, commit):
+        run_arguments = run_arguments_list[0]
+        pid = run_arguments["pid"]
+        commit = run_arguments["commit"]
+
+        def run():
             if tape and not commit:
                 raise AssertionError(
                     "Expecting commit to be true when taping. Set to false for module={}, pid={}".format(module, pid))
@@ -154,15 +162,16 @@ class ExtensionService(object):
                 self._run(config, path, pid, module, artifacts_to_stdout,
                           disable_context_commit=not commit, test_mode=True)
 
-        for run_arguments in run_arguments_list:
-            pid = run_arguments["pid"]
-            commit = run_arguments["commit"]
+        if tape:
+            vcr = create_vcr()
+            with vcr.use_cassette('{}.yaml'.format(description)):
+                run()
+        else:
+            run()
 
-            if tape:
-                with vcr.use_cassette('tapes/{}.yaml'.format(description)):
-                    run_single(pid, commit)
-            else:
-                run_single(pid, commit)
+
+
+
 
 
     def _gather_runs(self, module, require_tests=True):
@@ -611,7 +620,7 @@ class IndexFileExtension(GeneralExtension):
 
     def _get_sample_name(self, category):
         adjusted_name = category.replace(' ', '_')
-        adjusted_name = re.sub('\W+', '', adjusted_name)
+        adjusted_name = re.sub(r'\W+', '', adjusted_name)
         return 'IndexConfig_{}'.format(adjusted_name)
 
     def _target_pos_sort_key(self, analyte):

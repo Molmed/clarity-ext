@@ -84,7 +84,8 @@ def validate(module):
 
 
 modes = [ExtensionService.RUN_MODE_TEST,
-         ExtensionService.RUN_MODE_EXEC, "exec", "test", "tape"]
+         ExtensionService.RUN_MODE_EXEC,
+         ExtensionService.RUN_MODE_TAPE]
 
 
 @main.command()
@@ -105,8 +106,12 @@ def extension(module, mode, args, cache, description):
               will then run all the tapes.
     :param args: Dynamic parameters to the extension
     """
+    return
     global config
     default_logging()
+
+    extension_svc = ExtensionService(lambda msg: print(msg))
+
     try:
         # Parse the run arguments list:
         if args and isinstance(args, str):
@@ -114,7 +119,6 @@ def extension(module, mode, args, cache, description):
             key_values = (argument.split("=") for argument in separated)
             args = [{key: value for key, value in key_values}]
 
-        extension_svc = ExtensionService(lambda msg: print(msg))
         if mode == ExtensionService.RUN_MODE_TEST:
             extension_svc.set_log_strategy(log_level, True, False, True)
             extension_svc.run_test(config, args, module, True, cache)
