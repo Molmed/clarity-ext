@@ -118,9 +118,10 @@ class BaseVcrTest(unittest.TestCase):
 
         with vcr.use_cassette(cassette_name) as cass:
             result = runner.invoke(clarity_ext_entry_point,
-                    ["extension", "--args", f"pid={step_id}", module, "exec"])
+                ["extension", "--args", f"pid={step_id}", module, "exec"])
 
             if custom_checks:
                 custom_checks(result, cass)
+            else:
+                assert result.exit_code == 0, result.output
 
-        assert result.exit_code == 0, result.output

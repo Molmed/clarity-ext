@@ -1,4 +1,3 @@
-
 import sys
 import click
 import logging
@@ -106,7 +105,6 @@ def extension(module, mode, args, cache, description):
               will then run all the tapes.
     :param args: Dynamic parameters to the extension
     """
-    return
     global config
     default_logging()
 
