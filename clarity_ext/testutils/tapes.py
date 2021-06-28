@@ -7,14 +7,14 @@ from urllib.parse import urlparse
 import unittest
 from click.testing import CliRunner
 from clarity_ext.cli import main as clarity_ext_entry_point
+from datetime import datetime
 
 
 def get_uri():
     parsed = urlparse(BASEURI)
     return parsed.netloc
 
-
-def before_record_request(request):
+def replace_server(request):
     uri = get_uri()
     # Replace the lims-server instance. This is primarily so that one can run already taped
     # tests without worrying about what server is configured.
@@ -24,10 +24,9 @@ def before_record_request(request):
     if request.uri:
         request.uri = request.uri.replace(
                 uri, "lims-server")
-    return request
 
 
-def before_record_response(response):
+def replace_server_in_response(response):
     uri = get_uri()
     # Replace the lims-server instance. This is primarily so that one can run already taped
     # tests without worrying about what server is configured.
@@ -48,11 +47,7 @@ def before_record_response(response):
         for location in locations:
             new_location = location.replace(uri, "lims-server")
             new_locations.append(new_location)
-
         headers['Location'] = new_locations
-
-
-    return response
 
 
 def matcher(req1, req2):
@@ -70,10 +65,10 @@ def matcher(req1, req2):
         return
 
     if req1.body and req2.body and content_type1 == "application/xml":
-        diffo = main.diff_texts(req1.body, req1.body)
-        assert len(diffo) == 0, diffo
-        if diffo:
-            print(len(diffo))
+        the_diff = main.diff_texts(req1.body, req1.body)
+        assert len(the_diff) == 0, the_diff
+        if the_diff:
+            print(len(the_diff))
             exit()
     else:
         assert req1.body == req2.body, "bodies differ"
@@ -87,8 +82,6 @@ def create_vcr(fixture_path="./test/fixtures/cassettes"):
         cassette_library_dir=os.path.realpath(fixture_path),
         record_mode='once',
         filter_headers=['authorization'],
-        before_record_request=before_record_request,
-        before_record_response=before_record_response,
     )
 
     ret.register_matcher('matcher', matcher)
@@ -108,13 +101,15 @@ class BaseVcrTest(unittest.TestCase):
         vcr = create_vcr()
         runner = CliRunner()
 
-        # This is a quick fix to get the context files out of the way
-        context_dir = os.path.realpath(f"./test/acceptance/runs/{module}/{step_id}/")
+        timestamp = datetime.now().strftime("%y%m%dT%H%M%S")
 
-        if os.path.exists(context_dir):
-            shutil.rmtree(context_dir)
-        os.makedirs(context_dir)
-        os.chdir(context_dir)
+        # This is a quick fix to get the context files out of the way
+        test_dir = os.path.realpath(f"./test/acceptance/runs/{module}/{step_id}/{timestamp}/")
+
+        if os.path.exists(test_dir):
+            shutil.rmtree(test_dir)
+        os.makedirs(test_dir)
+        os.chdir(test_dir)
 
         with vcr.use_cassette(cassette_name) as cass:
             result = runner.invoke(clarity_ext_entry_point,
