@@ -8,6 +8,7 @@ import unittest
 from click.testing import CliRunner
 from clarity_ext.cli import main as clarity_ext_entry_point
 from datetime import datetime
+from clarity_ext.context import ExtensionContext
 
 
 def get_uri():
@@ -90,7 +91,8 @@ def create_vcr(fixture_path="./test/fixtures/cassettes"):
 
 
 class BaseVcrTest(unittest.TestCase):
-    def record_or_run_recording(self, cassette_name, step_id, module, custom_checks=None):
+    def record_or_run_recording(self, cassette_name, step_id, module,
+            pre_checks=None, post_checks=None):
         """
         Runs an extension for a step, taping all network communication if required, otherwise
         running using the existing tape for the test.
@@ -100,7 +102,6 @@ class BaseVcrTest(unittest.TestCase):
         """
         vcr = create_vcr()
         runner = CliRunner()
-
         timestamp = datetime.now().strftime("%y%m%dT%H%M%S")
 
         # This is a quick fix to get the context files out of the way
@@ -111,12 +112,16 @@ class BaseVcrTest(unittest.TestCase):
         os.makedirs(test_dir)
         os.chdir(test_dir)
 
-        with vcr.use_cassette(cassette_name) as cass:
+        with vcr.use_cassette(cassette_name) as cassette:
+            if pre_checks:
+                context = ExtensionContext.create(step_id)
+                pre_checks(context, cassette)
+
             result = runner.invoke(clarity_ext_entry_point,
                 ["extension", "--args", f"pid={step_id}", module, "exec"])
 
-            if custom_checks:
-                custom_checks(result, cass)
+            if post_checks:
+                context = ExtensionContext.create(step_id)
+                post_checks(context, result, cassette)
             else:
                 assert result.exit_code == 0, result.output
-
