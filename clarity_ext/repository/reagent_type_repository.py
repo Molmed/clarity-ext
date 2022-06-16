@@ -17,7 +17,7 @@ class ReagentTypeRepository:
         return ret
 
     def get_reagent_type(self, label):
-        reagent_type = self.get_reagent_types(label=label))
+        reagent_type = self.get_reagent_types(label=label)
 
         if len(reagent_type) == 1:
             return single(reagent_type)
