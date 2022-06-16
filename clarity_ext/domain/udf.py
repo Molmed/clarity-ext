@@ -85,6 +85,10 @@ class DomainObjectWithUdf(DomainObject):
 
         if self.qc_flag != self.api_resource.qc_flag:
             attrib_updates = True
+
+        if [self.reagent_label] != self.api_resource.reagent_labels:
+            attrib_updates = True
+
         if len(updated_fields) == 0 and not attrib_updates:
             return None
         else:
@@ -92,6 +96,7 @@ class DomainObjectWithUdf(DomainObject):
                 new_api_resource.udf[udf_info.key] = udf_info.value
             new_api_resource.name = self.name
             new_api_resource.qc_flag = self.qc_flag
+            new_api_resource.reagent_labels = [self.reagent_label]
             return new_api_resource
 
 
