@@ -1,6 +1,7 @@
 from clarity_ext.domain.artifact import Artifact
 from clarity_ext.domain.udf import DomainObjectWithUdf
 from clarity_ext.inversion_of_control.ioc import ioc
+from clarity_ext.utils import single
 
 
 class Aliquot(Artifact):
@@ -34,6 +35,7 @@ class Aliquot(Artifact):
         self.qc_flag = qc_flag if qc_flag else self.QC_FLAG_UNKNOWN
         self._samples = None
         self._sample_resources = samples or list()
+        self.reagent_label = single(api_resource.reagent_labels)
         self._init_samples()
 
     def _init_samples(self):
