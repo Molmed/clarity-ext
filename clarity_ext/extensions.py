@@ -138,7 +138,7 @@ class ExtensionService(object):
                 self._prepare_fresh_test(path)
 
             with utils.add_log_file_handler(os.path.join(path, "extensions.log"), False, ExtensionTestLogFilter()):
-                self._run(config, path, pid, module, artifacts_to_stdout, disable_context_commit=not commit, test_mode=True)
+                self._run(config, path, pid, module, artifacts_to_stdout, disable_context_commit=not commit, test_mode=True, run_arguments=run_arguments)
 
             if validate_against_frozen:
                 try:
@@ -273,7 +273,7 @@ class ExtensionService(object):
             context.commit_step_log_only()
             self._ensure_error_on_instance(instance, e)
 
-    def _run(self, config, path, pid, module, artifacts_to_stdout, disable_context_commit=False, test_mode=False):
+    def _run(self, config, path, pid, module, artifacts_to_stdout, disable_context_commit=False, test_mode=False, run_arguments={}):
         path = os.path.abspath(path)
         self.logger.info("Running extension {module} for pid={pid}, test_mode={test_mode}".format(
             module=module, pid=pid, test_mode=test_mode))
@@ -284,7 +284,8 @@ class ExtensionService(object):
         self.logger.info("Executing at {}".format(path))
         context = ExtensionContext.create(pid, test_mode=test_mode,
                                           disable_commits=disable_context_commit,
-                                          uploaded_to_stdout=artifacts_to_stdout)
+                                          uploaded_to_stdout=artifacts_to_stdout,
+                                          run_arguments=run_arguments)
 
         instance = extension(context, config, self)
 

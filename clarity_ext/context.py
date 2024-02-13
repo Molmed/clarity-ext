@@ -31,7 +31,7 @@ class ExtensionContext(object):
     def __init__(self, session, artifact_service, file_service, current_user,
                  step_logger_service, step_repo, clarity_service, dilution_service, process_service,
                  validation_service, test_mode=False,
-                 disable_commits=False):
+                 disable_commits=False, **kwargs):
         """
         Initializes the context.
 
@@ -68,9 +68,10 @@ class ExtensionContext(object):
         self._calls_to_commit = 0
         self.validation_results = list()
         self.start = datetime.now()
+        self.kwargs = kwargs
 
     @staticmethod
-    def create(step_id, test_mode=False, uploaded_to_stdout=False, disable_commits=False):
+    def create(step_id, test_mode=False, uploaded_to_stdout=False, disable_commits=False, **kwargs):
         """
         Creates a context with all required services set up. This is the way
         a context is meant to be created in production and integration tests,
@@ -97,7 +98,7 @@ class ExtensionContext(object):
                                 step_logger_service, step_repo, clarity_service,
                                 dilution_service, process_service,
                                 validation_service,
-                                test_mode=test_mode, disable_commits=disable_commits)
+                                test_mode=test_mode, disable_commits=disable_commits, **kwargs)
 
     @staticmethod
     def create_mocked(session, step_repo, os_service, file_repository, clarity_service,
